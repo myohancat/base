@@ -53,6 +53,9 @@ int MsgQ::recv(Msg& msg, int timeoutMs)
         }
     }
 
+    if (mEOS)
+        return MSGQ_RET_EOS;
+
     if (mQueue.size() == 0)
         return MSGQ_RET_EMPTY;
 
@@ -79,6 +82,9 @@ int MsgQ::peek(Msg& msg, int timeoutMs)
                 return MSGQ_RET_TIMEOUT;
         }
     }
+
+    if (mEOS)
+        return MSGQ_RET_EOS;
 
     if (mQueue.size() == 0)
         return MSGQ_RET_EMPTY;

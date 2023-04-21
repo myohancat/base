@@ -28,8 +28,9 @@ struct Msg
 
 #define MSGQ_RET_SUCCESS  0
 #define MSGQ_RET_TIMEOUT  1
-#define MSGQ_RET_EMPTY   -1
-#define MSGQ_RET_FULL    -1
+#define MSGQ_RET_EMPTY   -2
+#define MSGQ_RET_FULL    -3
+#define MSGQ_RET_EOS     -4
 
 class MsgQ
 {
