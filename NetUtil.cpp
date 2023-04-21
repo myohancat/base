@@ -15,7 +15,7 @@
 #include <net/if.h>
 #include <sys/ioctl.h>
 
-#include "trim.h"
+#include "Util.h"
 #include "Log.h"
 
 namespace NetUtil
