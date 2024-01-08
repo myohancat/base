@@ -10,6 +10,7 @@ namespace ProcessUtil
 {
 
 int get_pid(const char* process);
+int get_pid_from_proc_by_name(const char* process);
 
 int kill(const char* process);
 int kill_force(const char* process);

@@ -12,6 +12,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <dirent.h>
 #include <errno.h>
 #include <unistd.h>
 
@@ -62,6 +63,56 @@ int get_pid(const char* process)
     }
 
     return nPid;
+}
+
+static int _which_number(const char* s)
+{
+    for (const char* p = s; *p; p++)
+    {
+        if (*p < '0' || *p > '9')
+            return -1;
+    }
+
+    return atoi(s);
+}
+
+int get_pid_from_proc_by_name(const char* process)
+{
+    DIR *dp;
+    struct dirent *dir;
+    char buf[100], line[1024], tag[100], name[100];
+    int pid;
+    FILE *fp;
+
+    dp = opendir("/proc");
+    if (!dp)
+        return -1;
+
+    while ((dir = readdir(dp)))
+    {
+        pid = _which_number(dir->d_name);
+
+        if (pid == -1)
+            continue;
+
+        snprintf(buf, 100, "/proc/%d/status", pid);
+        fp = fopen(buf, "r");
+        if (fp == NULL)
+            continue;
+
+        fgets(line, 1024, fp);
+        fclose(fp);
+
+        sscanf(line, "%s %s", tag, name);
+        if (!strcmp (name, process))
+        {
+            closedir(dp);
+            return pid;
+        }
+    }
+
+    closedir(dp);
+    return -1;
 }
 
 int kill(const char* process)
