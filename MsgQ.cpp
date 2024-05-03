@@ -27,6 +27,9 @@ int MsgQ::send(const Msg& msg, int timeoutMs)
         }
     }
 
+    if (mEOS)
+        return MSGQ_RET_EOS;
+
     if (mQueue.size() >= mCapacity)
         return MSGQ_RET_FULL;
 

@@ -31,8 +31,6 @@ void EventQueue::setHandler(IEventHandler* handler)
 
 void EventQueue::sendEvent(int id, void* data, int dataLen)
 {
-    Lock lock(mLock);
-
     if(mPipe[1] < 0)
         return;
 
