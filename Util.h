@@ -6,15 +6,12 @@
 #ifndef __UTIL_H_
 #define __UTIL_H_
 
-#include <stdio.h>
+#include "Types.h"
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
-
-#define IS_SPACE(c)     ((c)==' ' || (c)=='\f' || (c)=='\n' || (c)=='\r' || (c)=='\t' || (c)=='\v')
-#define IS_QUOTE(ch)   (ch == '"' || ch == '\'')
 
 char* ltrim(char *s);
 char* rtrim(char* s);

@@ -6,6 +6,8 @@
 #ifndef __PROCESS_UTIL_H_
 #define __PROCESS_UTIL_H_
 
+#include "Types.h"
+
 namespace ProcessUtil
 {
 
@@ -17,6 +19,9 @@ int kill_force(const char* process);
 int kill_wait(const char* process, int timeoutMs);
 
 int system(const char* command);
+
+FILE* popen2(const char *command, const char *type, int* child_pid);
+int pclose2(FILE* fp, int pid);
 
 } // namepspace ProcessUtil
 

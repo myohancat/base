@@ -6,8 +6,12 @@
 #ifndef __TYPES_H_
 #define __TYPES_H_
 
+#include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
+
+#define IS_SPACE(c)     ((c)==' ' || (c)=='\f' || (c)=='\n' || (c)=='\r' || (c)=='\t' || (c)=='\v')
+#define IS_QUOTE(ch)   (ch == '"' || ch == '\'')
 
 #ifndef MIN
 #define MIN(x, y)   (x > y)?(y):(x)
