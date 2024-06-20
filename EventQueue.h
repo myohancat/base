@@ -26,6 +26,7 @@ public:
 
     void setHandler(IEventHandler* handler);
 
+    void sendEvent(int id);
     void sendEvent(int id, uintptr_t ptr);
     void sendEvent(int id, void* data, int dataLen);
 

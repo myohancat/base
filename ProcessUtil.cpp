@@ -1,8 +1,7 @@
 /**
- * MetaSCOPE Service
+ * My simple event loop source code
  *
- * Author: Kyungyin.Kim < kyungyin.kim@medithinq.com >
- * Copyright (c) 2021, MedithinQ. All rights reserved.
+ * Author: Kyungyin.Kim < myohancat@naver.com >
  */
 #include "ProcessUtil.h"
 
@@ -142,6 +141,43 @@ int kill_force(const char* process)
     ::kill(pid, SIGKILL);
 
     return 0;
+}
+
+static bool _is_exist_process(int pid)
+{
+    char path[1024];
+    sprintf(path, "/proc/%d", pid);
+    if (::access(path, F_OK) == 0)
+        return true;
+
+    return false;
+}
+
+#define POLL_TIME 100
+int kill_wait(const char* process, int timeoutMs)
+{
+    int pid = get_pid(process);
+    if (pid < 0)
+        return 0;
+
+    ::kill(pid, SIGTERM);
+
+    int retry = timeoutMs / POLL_TIME;
+    int remain = timeoutMs - (retry * POLL_TIME);
+    for (int ii = 0; ii < retry; ii++)
+    {
+        usleep(POLL_TIME * 1000);
+        if (!_is_exist_process(pid))
+            return 0;
+    }
+    if (remain > 0)
+    {
+        usleep(remain * 1000);
+        if (!_is_exist_process(pid))
+            return 0;
+    }
+
+    return -1;
 }
 
 int system(const char* command)

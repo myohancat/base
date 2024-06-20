@@ -6,6 +6,7 @@
 #include "NetUtil.h"
 
 #include <signal.h>
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -21,7 +22,26 @@
 namespace NetUtil
 {
 
-int poll2(struct pollfd *fds, nfds_t nfds, int timeout)
+int socket(SockType_e type)
+{
+    int sock = -1;
+    switch(type)
+    {
+        case SOCK_TYPE_TCP:
+            sock = ::socket(AF_INET, SOCK_STREAM, 0);
+            break;
+        case SOCK_TYPE_UDP:
+            sock = ::socket(AF_INET, SOCK_DGRAM, 0);
+            break;
+        default:
+            LOGE("Invalid socket type : %d\n", type);
+            break;
+    }
+
+    return sock;
+}
+
+int poll(struct pollfd *fds, nfds_t nfds, int timeout)
 {
     int ret = 0;
     sigset_t org_mask;
@@ -36,7 +56,7 @@ int poll2(struct pollfd *fds, nfds_t nfds, int timeout)
     sigaddset(&new_mask, SIGUSR2);
 
     sigprocmask(SIG_SETMASK, &new_mask, &org_mask);
-    ret = poll(fds, nfds, timeout);
+    ret = ::poll(fds, nfds, timeout);
     sigprocmask(SIG_SETMASK, &org_mask, NULL);
 
     return ret;
@@ -60,7 +80,7 @@ int fd_poll(int fd, int req, int timeout, int fd_int)
         nfds = 2;
     }
 
-    ret = poll2(fds, nfds, timeout);
+    ret = NetUtil::poll(fds, nfds, timeout);
     if ( ret == 0 )
         return POLL_TIMEOUT;    /* poll timeout */
 
@@ -105,7 +125,7 @@ int fd_poll(int fd, int req, int timeout, int fd_int)
     return -1;
 }
 
-int connect2(int sock, const char* ipaddr, int port, int timeout, int fd_int)
+int connect(int sock, const char* ipaddr, int port, int timeout, int fd_int)
 {
     int ret;
     struct sockaddr_in serv_addr;
@@ -123,7 +143,7 @@ int connect2(int sock, const char* ipaddr, int port, int timeout, int fd_int)
         return -1;
     }
 
-    ret = connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
+    ret = ::connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
 
     if (errno > 0 && errno != EAGAIN && errno != EINPROGRESS)
     {
@@ -159,7 +179,7 @@ int connect2(int sock, const char* ipaddr, int port, int timeout, int fd_int)
 }
 
 
-int bind2(int sock, const char* ipaddr, int port)
+int bind(int sock, const char* ipaddr, int port)
 {
     struct sockaddr_in addr;
 
@@ -181,7 +201,7 @@ int bind2(int sock, const char* ipaddr, int port)
         }
     }
 
-    if (bind(sock, (struct sockaddr*)&addr, sizeof(addr)) != 0)
+    if (::bind(sock, (struct sockaddr*)&addr, sizeof(addr)) != 0)
     {
         LOGE("bind failed. errno : %d(%s)\n", errno, strerror(errno));
         return -1;
@@ -190,6 +210,164 @@ int bind2(int sock, const char* ipaddr, int port)
     return 0;
 }
 
+int listen(int sock, int backlog)
+{
+    if (::listen(sock, backlog) < 0)
+    {
+        LOGE("listen failed. errno : %d(%s)\n", errno, strerror(errno));
+        return -1;
+    }
+
+    return 0;
+}
+
+int accept(int sock, char* clntaddr, int addrlen)
+{
+    struct sockaddr_in addr;
+    int addrLen = sizeof(addr);
+    
+    int clntSock = accept(sock, (struct sockaddr*) &addr, (socklen_t *) &addrLen);
+    if (clntSock < 0)
+    {
+        LOGE("accept failed. errno : %d(%s)\n", errno, strerror(errno));
+        return -1;
+    }
+
+    strncpy(clntaddr, inet_ntoa(addr.sin_addr), addrlen);
+    clntaddr[addrlen -1] = 0;
+
+    return clntSock;
+}
+
+int send(int sock, const void *buf, size_t len, int timeoutMs, int fd_int)
+{
+    int ret = NetUtil::fd_poll(sock, POLL_REQ_OUT, timeoutMs, fd_int);
+    if (ret == POLL_SUCCESS)
+    {
+        ret = ::send(sock, buf, len, MSG_NOSIGNAL);
+        if (ret < 0)
+        {
+            LOGE("send failed. errno : %d(%s)\n", errno, strerror(errno));
+            return -1;
+        }
+    }
+    else if (ret == POLL_INTERRUPTED)
+    {
+        LOGW("interrupted.\n");
+        ret = 0;
+    }
+    else if (ret == POLL_TIMEOUT)
+    {
+        //LOGW("timeout.\n");
+        ret = 0;
+    }
+    else
+        ret = -1; // Failed to Poll
+    
+    return ret;
+}
+
+int recv(int sock, void *buf, size_t len, int timeoutMs, int fd_int)
+{
+    int ret = NetUtil::fd_poll(sock, POLL_REQ_IN, timeoutMs, fd_int);
+    if (ret == POLL_SUCCESS)
+    {
+        ret = ::recv(sock, buf, len, MSG_NOSIGNAL);
+        if (ret < 0)
+        {
+            LOGE("recv failed. errno : %d(%s)\n", errno, strerror(errno));
+            return -1;
+        }
+    }
+    else if (ret == POLL_INTERRUPTED)
+    {
+        LOGW("interrupted.\n");
+        ret = 0;
+    }
+    else if (ret == POLL_TIMEOUT)
+    {
+        //LOGW("timeout.\n");
+        ret = 0;
+    }
+    else
+        ret = -1; // Failed to Poll
+    
+    return ret;
+}
+
+int sendto(int sock, const char* ipaddr, int port, void *buf, size_t len, int timeoutMs, int fd_int)
+{
+    int ret = NetUtil::fd_poll(sock, POLL_REQ_OUT, timeoutMs, fd_int);
+    if (ret == POLL_SUCCESS)
+    {
+        struct sockaddr_in addr;
+        addr.sin_family = AF_INET;
+        addr.sin_port = htons(port);
+        if (inet_pton(AF_INET, ipaddr, &addr.sin_addr) <= 0)
+        {
+            LOGE("Invalid address/ Address not supported \n");
+            return -1;
+        }
+
+        ret = ::sendto(sock, buf, len, MSG_NOSIGNAL, (struct sockaddr*)&addr, sizeof(addr));
+        if (ret < 0)
+        {
+            LOGE("send failed. errno : %d(%s)\n", errno, strerror(errno));
+            return -1;
+        }
+    }
+    else if (ret == POLL_INTERRUPTED)
+    {
+        LOGW("interrupted.\n");
+        ret = 0;
+    }
+    else if (ret == POLL_TIMEOUT)
+    {
+        //LOGW("timeout.\n");
+        ret = 0;
+    }
+    else
+        ret = -1; // Failed to Poll
+    
+    return ret;
+}
+
+int recvfrom(int sock, char* ipaddr, int iplen, void *buf, size_t len, int timeoutMs, int fd_int)
+{
+    int ret = NetUtil::fd_poll(sock, POLL_REQ_IN, timeoutMs, fd_int);
+    if (ret == POLL_SUCCESS)
+    {
+        struct sockaddr_in addr;
+        socklen_t addrlen = sizeof(addr);
+
+        ret = ::recvfrom(sock, buf, len, MSG_NOSIGNAL, (struct sockaddr*)&addr, &addrlen);
+        if (ret < 0)
+        {
+            LOGE("recv failed. errno : %d(%s)\n", errno, strerror(errno));
+            return -1;
+        }
+
+        if (ipaddr)
+        {
+            strncpy(ipaddr, inet_ntoa(addr.sin_addr), iplen);
+            ipaddr[iplen - 1] = 0;
+        }
+    }
+    else if (ret == POLL_INTERRUPTED)
+    {
+        LOGW("interrupted.\n");
+        ret = 0;
+    }
+    else if (ret == POLL_TIMEOUT)
+    {
+        //LOGW("timeout.\n");
+        ret = 0;
+    }
+    else
+        ret = -1; // Failed to Poll
+    
+    return ret;
+}
 
 int socket_set_blocking(int sock, bool block)
 {
@@ -221,20 +399,74 @@ int socket_set_reuseaddr(int sock)
     return 0;
 }
 
-
-int socket_set_buffer_size(int sock, int rcvBufSize, int sndBufSize)
+int socket_get_recv_buf_size(int sock)
 {
-    if (setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char*)&rcvBufSize, sizeof(rcvBufSize)) != 0)
+    int optval = 0;
+    socklen_t optlen = sizeof(optval);
+    if (getsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char*)&optval, &optlen) != 0)
     {
-        LOGW("Cannot set Receive Buffer size \n");
+        LOGW("Cannot get Receive Buffer size\n");
+        return 0;
     }
 
-    if (setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char*)&sndBufSize, sizeof(sndBufSize)) != 0)
+    return optval;
+}
+
+int socket_set_recv_buf_size(int sock, int bufSize)
+{
+    if (setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char*)&bufSize, sizeof(bufSize)) != 0)
+        goto SET_FORCE;
+
+    if (socket_get_recv_buf_size(sock) > bufSize)
+        return 0;
+        
+SET_FORCE:
+    if (setsockopt(sock, SOL_SOCKET, SO_RCVBUFFORCE, (char*)&bufSize, sizeof(bufSize)) != 0)
     {
-        LOGW("Cannot set Receive Buffer size \n");
+        LOGE("Failed to setting buffer size.\n");
+        return -1;
     }
 
-    return 0;
+    if (socket_get_recv_buf_size(sock) > bufSize)
+        return 0;
+
+    LOGE("Failed to setting rcv buf : try : %d, get : %d\n", bufSize, socket_get_recv_buf_size(sock));
+    return -1;
+}
+
+int socket_get_send_buf_size(int sock)
+{
+    int optval = 0;
+    socklen_t optlen = sizeof(optval);
+    if (getsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char*)&optval, &optlen) != 0)
+    {
+        LOGW("Cannot get Send Buffer size\n");
+        return 0;
+    }
+
+    return optval;
+}
+
+int socket_set_send_buf_size(int sock, int bufSize)
+{
+    if (setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char*)&bufSize, sizeof(bufSize)) != 0)
+        goto SET_FORCE;
+
+    if (socket_get_send_buf_size(sock) > bufSize)
+        return 0;
+        
+SET_FORCE:
+    if (setsockopt(sock, SOL_SOCKET, SO_SNDBUFFORCE, (char*)&bufSize, sizeof(bufSize)) != 0)
+    {
+        LOGE("Failed to setting buffer size.\n");
+        return -1;
+    }
+
+    if (socket_get_send_buf_size(sock) > bufSize)
+        return 0;
+
+    LOGE("Failed to setting send buf : try : %d, get : %d\n", bufSize, socket_get_send_buf_size(sock));
+    return -1;
 }
 
 int get_link_state(const char* ifname, bool* isUP)

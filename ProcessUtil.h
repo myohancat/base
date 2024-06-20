@@ -14,6 +14,7 @@ int get_pid_from_proc_by_name(const char* process);
 
 int kill(const char* process);
 int kill_force(const char* process);
+int kill_wait(const char* process, int timeoutMs);
 
 int system(const char* command);
 

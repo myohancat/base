@@ -11,7 +11,7 @@
 #include "Mutex.h"
 #include "CondVar.h"
 
-#define DEF_QUEUE_SIZE  10
+#define DEF_QUEUE_SIZE 16
 
 struct Msg
 {

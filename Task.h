@@ -51,6 +51,7 @@ protected:
     std::string mName;
     pthread_t   mId;
 
+private:
     Mutex       mMutex;
     CondVar     mCond;
     TaskState   mState;

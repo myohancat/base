@@ -51,6 +51,11 @@ void EventQueue::sendEvent(int id, uintptr_t ptr)
     sendEvent(id, &ptr, sizeof(uintptr_t));
 }
 
+void EventQueue::sendEvent(int id)
+{
+    sendEvent(id, 0, 0);
+}
+
 int EventQueue::getFD()
 {
     return mPipe[0];
