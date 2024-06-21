@@ -1,7 +1,8 @@
 /**
- * My simple event loop source code
+ * My Base Code
+ * c wrapper class for developing embedded system.
  *
- * Author: Kyungyin.Kim < myohancat@naver.com >
+ * author: Kyungyin.Kim < myohancat@naver.com >
  */
 #ifndef __CONDITION_VARIABLE_H_
 #define __CONDITION_VARIABLE_H_

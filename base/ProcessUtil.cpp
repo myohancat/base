@@ -1,7 +1,8 @@
 /**
- * My simple event loop source code
+ * My Base Code
+ * c wrapper class for developing embedded system.
  *
- * Author: Kyungyin.Kim < myohancat@naver.com >
+ * author: Kyungyin.Kim < myohancat@naver.com >
  */
 #include "ProcessUtil.h"
 
@@ -120,7 +121,7 @@ int kill(const char* process)
 
     if(pid < 0)
     {
-        LOGE("cannot found %s : pid %d\n", process, pid);
+        LOGE("cannot found %s : pid %d", process, pid);
         return -1;
     }
 
@@ -134,7 +135,7 @@ int kill_force(const char* process)
     int pid = get_pid(process);
     if(pid < 0)
     {
-        LOGE("cannot found %s : pid %d\n", process, pid);
+        LOGE("cannot found %s : pid %d", process, pid);
         return -1;
     }
 
@@ -190,7 +191,7 @@ int system(const char* command)
     pid = fork();
     if(pid < (pid_t)0)
     {
-        LOGE("Fork is failed !\n");
+        LOGE("Fork is failed !");
         return -1;
     }
 
@@ -216,7 +217,7 @@ int system(const char* command)
         }while(ret == (pid_t)-1 && errno == EINTR);
         if(ret != pid)
         {
-            LOGE("Wait PID is failed !\n");
+            LOGE("Wait PID is failed !");
             status = -1;
         }
     }
@@ -300,7 +301,7 @@ FILE* popen2(const char *command, const char *type, int* child_pid)
 
     if (!command)
     {
-        fprintf(stderr, "Command is NULL\n");
+        LOGE("Command is NULL");
         return NULL;
     }
 
@@ -308,14 +309,14 @@ FILE* popen2(const char *command, const char *type, int* child_pid)
 
     if (pipe(fds) != 0)
     {
-        fprintf(stderr, "create pipe failed. errno : %d\n", errno);
+        LOGE("create pipe failed. errno : %d", errno);
         return NULL;
     }
 
     pid = fork();
     if (pid == -1)
     {
-        fprintf(stderr, "create child failed. errno : %d\n", errno);
+        LOGE("create child failed. errno : %d", errno);
         return NULL;
     }
 

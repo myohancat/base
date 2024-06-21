@@ -1,7 +1,8 @@
 /**
- * My simple network util source code
+ * My Base Code
+ * c wrapper class for developing embedded system.
  *
- * Author: Kyungyin.Kim < myohancat@naver.com >
+ * author: Kyungyin.Kim < myohancat@naver.com >
  */
 #ifndef __NET_UTIL_H_
 #define __NET_UTIL_H_

@@ -1,7 +1,8 @@
 /**
- * My simple event loop source code
+ * My Base Code
+ * c wrapper class for developing embedded system.
  *
- * Author: Kyungyin.Kim < myohancat@naver.com >
+ * author: Kyungyin.Kim < myohancat@naver.com >
  */
 #include "TimerTask.h"
 
@@ -40,7 +41,7 @@ void TimerTask::start(uint32_t msec, bool repeat)
 
     if(!Task::start())
     {
-        LOGE("failed to create task\n");
+        LOGE("failed to create task");
     }
 }
 

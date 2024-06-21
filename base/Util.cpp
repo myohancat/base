@@ -1,13 +1,15 @@
 /**
- * My simple event loop source code
+ * My Base Code
+ * c wrapper class for developing embedded system.
  *
- * Author: Kyungyin.Kim < myohancat@naver.com >
+ * author: Kyungyin.Kim < myohancat@naver.com >
  */
 #include "Util.h"
 
 #include <stdio.h>
 #include <string.h>
 
+#include "Log.h"
 
 char* ltrim(char *s)
 {
@@ -124,7 +126,7 @@ int parse_ini(FILE* file, fnIniCB cb, void* param)
 
         if(error)
         {
-            fprintf(stderr, "Parsing is failed ! line : %d  reason : %s\n", lineno, errmsg);
+            LOGE("Parsing is failed ! line : %d  reason : %s", lineno, errmsg);
             break;
         }
     }

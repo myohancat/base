@@ -1,12 +1,13 @@
 /**
- * My simple event loop source code
+ * My Base Code
+ * c wrapper class for developing embedded system.
  *
- * Author: Kyungyin.Kim < myohancat@naver.com >
+ * author: Kyungyin.Kim < myohancat@naver.com >
  */
 #ifndef __EVENT_QUEUE_H_
 #define __EVENT_QUEUE_H_
 
-#include "EventLoop.h"
+#include "MainLoop.h"
 
 #define MAX_DATA_LEN   (4096)
 

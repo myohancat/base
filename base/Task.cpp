@@ -1,7 +1,8 @@
 /**
- * My simple event loop source code
+ * My Base Code
+ * c wrapper class for developing embedded system.
  *
- * Author: Kyungyin.Kim < myohancat@naver.com >
+ * author: Kyungyin.Kim < myohancat@naver.com >
  */
 #include "Task.h"
 
@@ -53,7 +54,7 @@ bool Task::start()
 
     if (mState != TASK_STATE_INIT && mState != TASK_STATE_STOPPED)
     {
-        LOGW("task %s is already running\n", mName.c_str());
+        LOGW("task %s is already running", mName.c_str());
         return false;
     }
 
@@ -66,7 +67,7 @@ bool Task::start()
 
     if (!onPreStart())
     {
-        LOGE("onPreStart() failed !\n");
+        LOGE("onPreStart() failed !");
         return false;
     }
 
@@ -84,7 +85,7 @@ bool Task::start()
 
     if (pthread_create (&mId, &attr, _task_proc_priv, this) != 0)
     {
-        LOGE("pthread create failed !\n");
+        LOGE("pthread create failed !");
         pthread_attr_destroy(&attr);
         return false;
     }

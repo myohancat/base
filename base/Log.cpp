@@ -1,7 +1,8 @@
 /**
- * My simple event loop source code
+ * My Base Code
+ * c wrapper class for developing embedded system.
  *
- * Author: Kyungyin.Kim < myohancat@naver.com >
+ * author: Kyungyin.Kim < myohancat@naver.com >
  */
 #include "Log.h"
 
@@ -12,7 +13,7 @@
 #include <pthread.h>
 #include <sys/time.h>
 
-static LOG_LEVEL_e gLogLevel = LOG_LEVEL_TRACE;
+static LOG_LEVEL_e  gLogLevel = LOG_LEVEL_TRACE;
 static bool gLogWithTime = true;
 
 #define LOCK_LOG_OUT()    do { } while(0)

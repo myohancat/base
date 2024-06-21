@@ -1,7 +1,8 @@
 /**
- * My simple event loop source code
+ * My Base Code
+ * c wrapper class for developing embedded system.
  *
- * Author: Kyungyin.Kim < myohancat@naver.com >
+ * author: Kyungyin.Kim < myohancat@naver.com >
  */
 #include "EventQueue.h"
 
@@ -12,12 +13,12 @@ EventQueue::EventQueue()
           : mHandler(NULL)
 {
     pipe(mPipe);
-    EventLoop::getInstance().addFdWatcher(this);
+    MainLoop::getInstance().addFdWatcher(this);
 }
 
 EventQueue::~EventQueue()
 {
-    EventLoop::getInstance().removeFdWatcher(this);
+    MainLoop::getInstance().removeFdWatcher(this);
 
     SAFE_CLOSE(mPipe[0]);
     SAFE_CLOSE(mPipe[1]);
@@ -36,7 +37,7 @@ void EventQueue::sendEvent(int id, void* data, int dataLen)
 
     if (dataLen > MAX_DATA_LEN)
     {
-        LOGE("dataLen (%d) is too big. maximum data len is %d\n", dataLen, MAX_DATA_LEN);
+        LOGE("dataLen (%d) is too big. maximum data len is %d", dataLen, MAX_DATA_LEN);
         return;
     }
 

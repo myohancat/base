@@ -1,9 +1,10 @@
 /**
- * My simple event loop source code
+ * My Base Code
+ * c wrapper class for developing embedded system.
  *
- * Author: Kyungyin.Kim < myohancat@naver.com >
+ * author: Kyungyin.Kim < myohancat@naver.com >
  */
-#include "EventLoop.h"
+#include "MainLoop.h"
 
 #include "SysTime.h"
 #include "Log.h"
@@ -22,14 +23,14 @@ static bool timer_sort(const Timer* first, const Timer* second)
     return first->getExpiry() < second->getExpiry();
 }
 
-EventLoop& EventLoop::getInstance()
+MainLoop& MainLoop::getInstance()
 {
-    static EventLoop instance;
+    static MainLoop instance;
 
     return instance;
 }
 
-void EventLoop::addFdWatcher(IFdWatcher* watcher)
+void MainLoop::addFdWatcher(IFdWatcher* watcher)
 {
     Lock lock(mFdWatcherLock);
 
@@ -39,14 +40,14 @@ void EventLoop::addFdWatcher(IFdWatcher* watcher)
     FdWatcherList::iterator it = std::find(mFdWatchers.begin(), mFdWatchers.end(), watcher);
     if(watcher == *it)
     {
-        LOGE("FdWatcher is alreay exsit !!\n");
+        LOGE("FdWatcher is alreay exsit !!");
         return;
     }
 
     mFdWatchers.push_back(watcher);
 }
 
-void EventLoop::removeFdWatcher(IFdWatcher* watcher)
+void MainLoop::removeFdWatcher(IFdWatcher* watcher)
 {
     Lock lock(mFdWatcherLock);
 
@@ -63,7 +64,7 @@ void EventLoop::removeFdWatcher(IFdWatcher* watcher)
     }
 }
 
-void EventLoop::addTimer(Timer* timer)
+void MainLoop::addTimer(Timer* timer)
 {
     Lock lock(mTimerLock);
 
@@ -73,7 +74,7 @@ void EventLoop::addTimer(Timer* timer)
     TimerList::iterator it = std::find(mTimers.begin(), mTimers.end(), timer);
     if(timer == *it)
     {
-        LOGE("timer is alreay exsit !!\n");
+        LOGE("timer is alreay exsit !!");
         return;
     }
 
@@ -81,7 +82,7 @@ void EventLoop::addTimer(Timer* timer)
     mTimers.sort(timer_sort);
 }
 
-void EventLoop::removeTimer(Timer* timer)
+void MainLoop::removeTimer(Timer* timer)
 {
     Lock lock(mTimerLock);
 
@@ -101,7 +102,7 @@ void EventLoop::removeTimer(Timer* timer)
 
 #define WAIT_TIME (10* 1000)
 
-uint32_t EventLoop::runTimers()
+uint32_t MainLoop::runTimers()
 {
     Lock lock(mTimerLock);
 
@@ -137,7 +138,7 @@ uint32_t EventLoop::runTimers()
 }
 
 #define _MAX(x, y)   ((x>y)?x:y)
-bool EventLoop::loop()
+bool MainLoop::loop()
 {
     int      nCnt = 0;
     int      nLastFd = -1;
@@ -183,7 +184,7 @@ bool EventLoop::loop()
             /* INTERRUPT RECIEVED */
             return true;
         }
-        LOGE("select error oucced!!! errno=%d\n", errno);
+        LOGE("select error oucced!!! errno=%d", errno);
         return false;
     }
 
@@ -192,19 +193,19 @@ bool EventLoop::loop()
         char cCmd;
         if(read(mPipe[0], &cCmd, 1) < 0)
         {
-            LOGE("pipe read failed !\n");
+            LOGE("pipe read failed !");
             return true;
         }
 
         switch(cCmd)
         {
             case 'T':
-                LOGI(">>>>> terminated recieved !\n");
+                LOGI(">> terminated recieved.");
                 return false;
             case 'S':
                 return true;
             default:
-                LOGE("Unkown Thread Command Inputed '%c'!!!\n", cCmd);
+                LOGE("Unkown Thread Command Inputed '%c'!!!", cCmd);
                 return true;
         }
     }
@@ -222,7 +223,7 @@ bool EventLoop::loop()
     return true;
 }
 
-void EventLoop::post(const std::function<void()> &func)
+void MainLoop::post(const std::function<void()> &func)
 {
     Lock lock(mFunctionLock);
 
@@ -230,7 +231,7 @@ void EventLoop::post(const std::function<void()> &func)
     wakeup();
 }
 
-bool EventLoop::runFunctions()
+bool MainLoop::runFunctions()
 {
     Lock lock(mFunctionLock);
 
@@ -244,28 +245,28 @@ bool EventLoop::runFunctions()
     return false;
 }
 
-void EventLoop::wakeup()
+void MainLoop::wakeup()
 {
     if(mPipe[1] >= 0)
         write(mPipe[1], "S", 1);
 }
 
-void EventLoop::terminate()
+void MainLoop::terminate()
 {
     if(mPipe[1] >= 0)
         write(mPipe[1], "T", 1);
 }
 
-EventLoop::EventLoop()
+MainLoop::MainLoop()
 {
     /* for stop command */
     if(pipe(mPipe) < 0)
     {
-        LOGE("cannot create pipe !\n");
+        LOGE("cannot create pipe !");
     }
 }
 
-EventLoop::~EventLoop()
+MainLoop::~MainLoop()
 {
     SAFE_CLOSE(mPipe[0]);
     SAFE_CLOSE(mPipe[1]);

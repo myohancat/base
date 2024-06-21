@@ -1,11 +1,12 @@
 /**
- * My simple event loop source code
+ * My Base Code
+ * c wrapper class for developing embedded system.
  *
- * Author: Kyungyin.Kim < myohancat@naver.com >
+ * author: Kyungyin.Kim < myohancat@naver.com >
  */
 #include "Timer.h"
 
-#include "EventLoop.h"
+#include "MainLoop.h"
 #include "SysTime.h"
 
 Timer::Timer()
@@ -40,8 +41,8 @@ void Timer::start(uint32_t msec, bool repeat)
         mExpiry = (uint64_t)(-1);
 
     mRunning = true;
-    EventLoop::getInstance().addTimer(this);
-    EventLoop::getInstance().wakeup();
+    MainLoop::getInstance().addTimer(this);
+    MainLoop::getInstance().wakeup();
 }
 
 void Timer::restart()
@@ -55,8 +56,8 @@ void Timer::restart()
 void Timer::stop()
 {
     mRunning = false;
-    EventLoop::getInstance().removeTimer(this);
-    EventLoop::getInstance().wakeup();
+    MainLoop::getInstance().removeTimer(this);
+    MainLoop::getInstance().wakeup();
 }
 
 void Timer::setInterval(uint32_t msec)
