@@ -27,7 +27,7 @@ public:
         delete[] mBuffer;
     }
 
-    bool put(const T data, int timeoutMs)
+    bool put(const T t, int timeoutMs = -1)
     {
         Lock lock(mLock);
 
@@ -50,13 +50,13 @@ public:
         if (mEOS)
             return false;
 
-        put(data);
+        _put(t);
         mCvEmpty.signal();
 
         return true;
     }
 
-    bool putForce(T data)
+    bool putForce(T t)
     {
         Lock lock(mLock);
 
@@ -65,17 +65,18 @@ public:
 
         if (mSize == mCapacity)
         {
-            T t = get();
-            dispose(t);
+            T t1;
+            _get(&t1);
+            dispose(t1);
         }
 
-        put(data);
+        _put(t);
         mCvEmpty.signal();
 
         return true;
     }
 
-    T get(int timeoutMs)
+    bool get(T* t, int timeoutMs = -1)
     {
         Lock lock(mLock);
 
@@ -84,24 +85,24 @@ public:
             if (timeoutMs == -1)
                 mCvEmpty.wait(mLock);
             else if (timeoutMs == 0)
-                return NULL;
+                return false;
             else
             { 
                 if (!mCvEmpty.wait(mLock, timeoutMs))
-                    return NULL;
+                    return false;
             }
         }
 
         if (mSize == 0)
-            return NULL;
+            return false;
 
         if (mEOS)
-            return NULL;
+            return false;
 
-        T data = get();
+        _get(t);
         mCvFull.signal();
 
-        return data;
+        return true;
     }
 
     void flush()
@@ -136,8 +137,8 @@ public:
     bool isFull();
 
 protected:
-    void put(T data);
-    T    get();
+    void _put(T t);
+    void _get(T* t);
 
     /* MUST OVERRIDE to free T */
     virtual void dispose(UNUSED_PARAM T d) { }
@@ -190,21 +191,19 @@ inline bool Queue<T, capacity>::isEOS()
 }
 
 template<typename T, int capacity>
-inline void Queue<T, capacity>::put(T data)
+inline void Queue<T, capacity>::_put(T t)
 {
-    mBuffer[mRear] = data;
+    mBuffer[mRear] = t;
     mRear = (mRear + 1) % mCapacity;
     mSize ++;
 }
 
 template<typename T, int capacity>
-inline T Queue<T, capacity>::get()
+inline void Queue<T, capacity>::_get(T* t)
 {
-    T data = mBuffer[mFront];
+    *t = mBuffer[mFront];
     mFront = (mFront + 1) % mCapacity;
     mSize --;
-
-    return data;
 }
 
 #endif /* __QUEUE_H_ */

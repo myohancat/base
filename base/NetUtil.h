@@ -9,6 +9,7 @@
 
 #include <stdint.h>
 #include <poll.h>
+#include <errno.h>
 #include <unistd.h>
 
 typedef enum
@@ -40,17 +41,33 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout);
 #define POLL_REQ_OUT     (POLLOUT)
 int fd_poll(int fd, int req, int timeout, int fd_int = -1);
 
+/**
+ * return  == 0, success
+ * return < 0, error occured.
+ * especially, timeout error is -ETIMEDOUT
+ */
+#define NET_ERR_SUCCESS     0
+#define NET_ERR_TIMEOUT     -ETIMEDOUT
 int connect(int sock, const char* ipaddr, int port, int timeout, int fd_int = -1);
 int bind(int sock, const char* ipaddr, int port);
 int listen(int sock, int backlog);
 int accept(int sock, char* clntaddr, int addrlen);
 
+/**
+ * return > 0, success. 
+ * return < 0, error occured.
+ * especially, timeout error is -ETIMEDOUT
+ * return == 0, interrupted.
+ */
 int send(int sock, const void *buf, size_t len, int timeoutMs, int fd_int = -1);
 int recv(int sock, void *buf, size_t len, int timeoutMs, int fd_int = -1);
-
 int sendto(int sock, const char* ipaddr, int port, void *buf, size_t len, int timeoutMs, int fd_int = -1);
 int recvfrom(int sock, char* ipaddr, int iplen, void *buf, size_t len, int timeoutMs, int fd_int = -1);
 
+/**
+ * return == 0, success
+ * return < 0, error occured.
+ */
 /* Socket Option */
 int socket_set_blocking(int sock, bool block);
 int socket_set_reuseaddr(int sock);

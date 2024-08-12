@@ -337,6 +337,8 @@ FILE* popen2(const char *command, const char *type, int* child_pid)
         setpgid(pid, pid);
         execvp(argv[0], argv);
 
+        UNUSED(free_args);
+
         exit(0);
     }
 

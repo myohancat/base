@@ -44,6 +44,7 @@ Task::Task(int priority, const std::string& name)
 
 Task::~Task()
 {
+    // stop();
 }
 
 bool Task::start()

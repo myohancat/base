@@ -31,6 +31,7 @@ SRCS      += TimerTask.cpp
 SRCS      += SysTime.cpp
 SRCS      += NetUtil.cpp
 SRCS      += ProcessUtil.cpp
+SRCS      += FileUtil.cpp
 SRCS      += Util.cpp
 
 INCDIRS   += $(BASE)

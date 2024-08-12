@@ -149,7 +149,7 @@ int connect(int sock, const char* ipaddr, int port, int timeout, int fd_int)
     if (errno > 0 && errno != EAGAIN && errno != EINPROGRESS)
     {
         LOGE("Cannot connect !, errno = %d", errno);
-        ret = -1;
+        ret = -errno;
     }
 
     ret = fd_poll(sock, POLLOUT, timeout, fd_int);
@@ -161,12 +161,12 @@ int connect(int sock, const char* ipaddr, int port, int timeout, int fd_int)
     else if (ret == POLL_TIMEOUT) // TIMEOUT
     {
         LOGE("Connecton timeout ... !");
-        ret = -1;
+        ret = -ETIMEDOUT;
     }
     else if (ret == POLL_INTERRUPTED)
     {
         LOGE("!!! INTERUPTED !!!!");
-        ret = -1;
+        ret = -EINTR;
     }
     else
     {
@@ -216,7 +216,7 @@ int listen(int sock, int backlog)
     if (::listen(sock, backlog) < 0)
     {
         LOGE("listen failed. errno : %d(%s)", errno, strerror(errno));
-        return -1;
+        return -errno;
     }
 
     return 0;
@@ -231,7 +231,7 @@ int accept(int sock, char* clntaddr, int addrlen)
     if (clntSock < 0)
     {
         LOGE("accept failed. errno : %d(%s)", errno, strerror(errno));
-        return -1;
+        return -errno;
     }
 
     strncpy(clntaddr, inet_ntoa(addr.sin_addr), addrlen);
@@ -249,7 +249,7 @@ int send(int sock, const void *buf, size_t len, int timeoutMs, int fd_int)
         if (ret < 0)
         {
             LOGE("send failed. errno : %d(%s)", errno, strerror(errno));
-            return -1;
+            return -errno;
         }
     }
     else if (ret == POLL_INTERRUPTED)
@@ -260,7 +260,7 @@ int send(int sock, const void *buf, size_t len, int timeoutMs, int fd_int)
     else if (ret == POLL_TIMEOUT)
     {
         //LOGW("timeout.");
-        ret = 0;
+        ret = -ETIMEDOUT;
     }
     else
         ret = -1; // Failed to Poll
@@ -277,7 +277,7 @@ int recv(int sock, void *buf, size_t len, int timeoutMs, int fd_int)
         if (ret < 0)
         {
             LOGE("recv failed. errno : %d(%s)", errno, strerror(errno));
-            return -1;
+            return -errno;
         }
     }
     else if (ret == POLL_INTERRUPTED)
@@ -288,7 +288,7 @@ int recv(int sock, void *buf, size_t len, int timeoutMs, int fd_int)
     else if (ret == POLL_TIMEOUT)
     {
         //LOGW("timeout.");
-        ret = 0;
+        ret = -ETIMEDOUT;
     }
     else
         ret = -1; // Failed to Poll
@@ -314,7 +314,7 @@ int sendto(int sock, const char* ipaddr, int port, void *buf, size_t len, int ti
         if (ret < 0)
         {
             LOGE("send failed. errno : %d(%s)", errno, strerror(errno));
-            return -1;
+            return -errno;
         }
     }
     else if (ret == POLL_INTERRUPTED)
@@ -325,7 +325,7 @@ int sendto(int sock, const char* ipaddr, int port, void *buf, size_t len, int ti
     else if (ret == POLL_TIMEOUT)
     {
         //LOGW("timeout.");
-        ret = 0;
+        ret = -ETIMEDOUT;
     }
     else
         ret = -1; // Failed to Poll
@@ -345,7 +345,7 @@ int recvfrom(int sock, char* ipaddr, int iplen, void *buf, size_t len, int timeo
         if (ret < 0)
         {
             LOGE("recv failed. errno : %d(%s)", errno, strerror(errno));
-            return -1;
+            return -errno;
         }
 
         if (ipaddr)
@@ -362,7 +362,7 @@ int recvfrom(int sock, char* ipaddr, int iplen, void *buf, size_t len, int timeo
     else if (ret == POLL_TIMEOUT)
     {
         //LOGW("timeout.");
-        ret = 0;
+        ret = -ETIMEDOUT;
     }
     else
         ret = -1; // Failed to Poll
