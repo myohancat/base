@@ -18,7 +18,7 @@ int filesize(const char* file, size_t* psize);
 typedef void (*CopyCB_fn)(void* param, const char* file, size_t copied);
 int copy(const char* src, const char* dst, CopyCB_fn fnCB, void* param);
 
-int mkdir(const char* path, mode_t mode);
+int mkdir(const char* path, mode_t mode=0644);
 
 } // namespace FileUtil
 
