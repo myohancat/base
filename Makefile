@@ -3,7 +3,7 @@
 include config.mk
 #include build/tools.mk.rk3588
 
-Q_		   := @
+Q_           := @
 PKG_CONFIG ?= pkg-config
 
 LOCAL_DIR := $(shell pwd)
