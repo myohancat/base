@@ -1,3 +1,9 @@
+/**
+ * My Base Code
+ * c wrapper class for developing embedded system.
+ *
+ * author: Kyungyin.Kim < myohancat@naver.com >
+ */
 #ifndef __RENDERER_COMMON_H_
 #define __RENDERER_COMMON_H_
 

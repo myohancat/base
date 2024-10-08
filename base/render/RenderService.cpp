@@ -449,7 +449,6 @@ void RenderService::onTimerExpired(const ITimer* timer)
 
 void RenderService::onDisplayPlugged()
 {
-    CHECK("RenderService::onDisplayPlugged()");
     start();
     
     Msg msg(MSG_ID_UPDATE, true);
@@ -458,7 +457,6 @@ void RenderService::onDisplayPlugged()
 
 void RenderService::onDisplayRemoved()
 {
-    CHECK("RenderService::onDisplayRemoved()");
     stop();
 }
 

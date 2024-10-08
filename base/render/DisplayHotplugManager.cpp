@@ -7,6 +7,7 @@
 #include "DisplayHotplugManager.h"
 
 #include <stdlib.h>
+#include <string.h>
 #include <linux/netlink.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -22,13 +23,14 @@
 
 #include <algorithm>
 
+#include "Util.h"
 #include "Log.h"
 
 static const char* gDevicePaths[] =
 {
 #if defined(CONFIG_SOC_RK3588)
-    "/devices/platform/fde50000.dp",
-    "/devices/platform/fde80000.hdmi",
+    "/devices/platform/fde50000.dp/extcon",
+    "/devices/platform/fde80000.hdmi/extcon",
 #elif defined(CONFIG_SOC_IMX8MQ)
     // TODO
 #elif defined(CONFIG_SOC_XAVIER)
@@ -144,7 +146,7 @@ bool DisplayHotplugManager::onFdReadable(int fd)
     {
         if (strncmp(devpath, gDevicePaths[ii], strlen(gDevicePaths[ii])) == 0)
         {
-            notifyHotplugEvent(devpath);
+            notifyHotplugEvent(gDevicePaths[ii]);
             return true;
         }
     }
@@ -186,8 +188,10 @@ bool DisplayHotplugManager::isPlugged(const char* devpath)
                     continue;
         }
 
+#if defined(CONFIG_SOC_RPI5)
         if (strncmp(de->d_name, "card0-HDMI-A", 12) != 0 && strncmp(de->d_name, "card1-HDMI-A", 12) != 0)
             continue;
+#endif
 
         plugged |= isPlugged(path, de->d_name);
         if (plugged)
@@ -203,14 +207,35 @@ bool DisplayHotplugManager::isPlugged(const char* syspath, const char* subpath)
 {
     char path[2048];
     char line[1024];
+#if defined(CONFIG_SOC_RK3588)
+    sprintf(path, "%s/%s/state", syspath, subpath);
+#else
     sprintf(path, "%s/%s/status", syspath, subpath);
+#endif
 
     FILE* fp = fopen(path, "r");
+    if (!fp)
+        return false;
+
     if (fgets(line, sizeof(line), fp))
     {
+        LOGD("%s", trim(line));
+#if defined(CONFIG_SOC_RK3588)
+        char* p = strchr(line, '=');
+        if (!p)
+            p = line;
+        else
+            p++;
+
+        if (atoi(p) == 1)
+            return true;
+
+#elif defined(CONFIG_SOC_RPI5)
         if (strncmp(line, "connected", 9) == 0)
-            return true; 
+            return true;
+#endif
     }
+    fclose(fp);
 
     return false;
 }
