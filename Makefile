@@ -1,25 +1,26 @@
 .SUFFIXES : .c .o 
 
-include config.mk
+# Cross compile
 #include build/tools.mk.rk3588
 
-Q_           := @
+Q_         := @
 PKG_CONFIG ?= pkg-config
 
-LOCAL_DIR := $(shell pwd)
+LOCAL_DIR  := $(shell pwd)
 
-CXXFLAGS  += -fPIC -Wno-unused-function -Wno-unused-result
-CFLAGS    += -fPIC -Wno-unused-function -Wno-unused-result
-LDFLAGS   += -lpthread -ldl
-DEFINES   += 
+CXXFLAGS   += -fPIC -Wno-unused-function -Wno-unused-result
+CFLAGS     += -fPIC -Wno-unused-function -Wno-unused-result
+LDFLAGS    += -lpthread -ldl
+DEFINES    += 
 
-OUT_DIR   := out
-TARGET    := test
+OUT_DIR    := out
+TARGET     := test
 
-INCDIRS   :=
-SRCDIRS   :=
-SRCS      :=
+INCDIRS    :=
+SRCDIRS    :=
+SRCS       :=
 
+include config.mk
 include base/base.mk
 
 INCDIRS   += $(LOCAL_DIR)
