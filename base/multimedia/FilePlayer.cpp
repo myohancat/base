@@ -76,6 +76,8 @@ GstElement* FilePlayer::createGstPipeline()
 #elif defined(CONFIG_SOC_XAVIER_NX)
     ss << " ! nvv4l2decoder name=dec ! nvvidconv ";
     ss << " ! video/x-raw(memory:NVMM), format=(string)RGBA";
+#else
+    ss << " ! v4l2slh264dec ! glupload ";
 #endif
     ss << " ! appsink name=sink";
 

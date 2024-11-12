@@ -32,7 +32,7 @@ const char* get_passphrase(char* passphrase, const char* ssid, const char* psk)
     char cmd[1024];
     char line[1024];
 
-    sprintf(cmd, "/usr/bin/wpa_passphrase \"%s\" %s", ssid, psk);
+    sprintf(cmd, "wpa_passphrase \"%s\" %s", ssid, psk);
 
     FILE* fp = popen(cmd, "r");
     if(fp == NULL)

@@ -74,6 +74,8 @@ RenderService::RenderService()
               : Task(1, "RenderService"),
                 mPlatform(NULL)
 {
+    mMsgQ.setEOS(true);
+
     mTimer.setHandler(this);
     DisplayHotplugManager::getInstance().addListener(this);
 }
@@ -246,6 +248,8 @@ __TRACE__
 
                 //glDrawElements(GL_TRIANGLES, sizeof(INDICES) / sizeof(INDICES[0]), GL_UNSIGNED_SHORT, INDICES);
                 glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+                //eglSwapInterval(mDisplay, 1);
                 eglSwapBuffers(mDisplay, mSurface);
 
                 //int diff = SysTime::getTickCountMs() - startTime;
@@ -426,12 +430,15 @@ void RenderService::setRenderMode(RenderMode_e eMode)
     if (mRenderMode == eMode)
         return;
 
+    if (state() != TASK_STATE_RUNNING)
+        return;
+
+    mRenderMode = eMode;
+
     if (eMode == RENDER_MODE_CONTINUOUSLY)
         mTimer.start(DELAY_FOR_30_FPS, true);
     else
         mTimer.stop();
-
-    mRenderMode = eMode;
 }
 
 void RenderService::sortRenderer()

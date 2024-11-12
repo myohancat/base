@@ -136,6 +136,7 @@ void GstAppsinkRenderable::onDrawFrame()
     
     int width;
     int height;
+    bool needToDestroy = false;
     if (gst_structure_get_int(gstCapsStruct, "width", &width) && gst_structure_get_int(gstCapsStruct, "height", &height))
     {
         GstVideoMeta* meta = gst_buffer_get_video_meta(buffer);
@@ -160,6 +161,8 @@ void GstAppsinkRenderable::onDrawFrame()
                     image = GstHelper::create_egl_image_from_dmabuf(dmabuf_fd, meta);
                 else
                     image = GstHelper::create_egl_image_from_dmabuf(mem, format, width, height);
+
+                needToDestroy = true;
             }
         }
         else if (gst_caps_features_contains(gstCapsFeatures, "memory:GLMemory"))
@@ -185,9 +188,8 @@ void GstAppsinkRenderable::onDrawFrame()
         {
             if (mRectView.isValid())
                 mRenderer->setView(mRectView.getX(), mRectView.getY(), mRectView.getWidth(), mRectView.getHeight());
-                
+
             mRenderer->onDraw(image);
-            //glFinish();
 
 #if defined(CONFIG_SOC_XAVIER_NX)
             if (gst_caps_features_contains(gstCapsFeatures, "memory:NVMM"))
@@ -195,11 +197,9 @@ void GstAppsinkRenderable::onDrawFrame()
                 NvBufSurface* surf = (NvBufSurface*)map.data;
                 NvBufSurfaceUnMapEglImage(surf, 0);
             }
-            else
-                GstHelper::destroy_egl_image(image);
-#else
-            GstHelper::destroy_egl_image(image);
 #endif
+            if (needToDestroy)
+                GstHelper::destroy_egl_image(image);
         }
         else
         {
@@ -283,10 +283,10 @@ void GstAppsinkRenderable::sync_bus_call(GstBus* bus, GstMessage* msg, gpointer 
     {
         case GST_MESSAGE_NEED_CONTEXT:
         {
-            LOGW("GST_MESSAGE_NEED_CONTEXT : %d", msg);
             const gchar *context_type;
             gst_message_parse_context_type (msg, &context_type);
-            
+
+            LOGD(" Context type: %s", context_type);
             if (g_strcmp0 (context_type, GST_GL_DISPLAY_CONTEXT_TYPE) == 0)
             {
                 GstGLDisplay* gl_display = GST_GL_DISPLAY(gst_gl_display_egl_new_with_egl_display(RenderService::getInstance().getDisplay()));
@@ -296,6 +296,12 @@ void GstAppsinkRenderable::sync_bus_call(GstBus* bus, GstMessage* msg, gpointer 
                 gst_element_set_context (GST_ELEMENT (msg->src), context);
                 gst_context_unref (context);
             }
+            else if (g_strcmp0 (context_type, "gst.gl.app_context") == 0)
+            {
+                LOGW("TODO. Implements HERE");
+                // TODO
+            }
+
             break;
         }
         default:

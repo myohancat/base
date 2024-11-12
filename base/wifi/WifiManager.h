@@ -16,8 +16,6 @@
 
 #include "wpa_ctrl.h"
 
-#define MANAGER_FREQ 5180
-
 const char* get_passphrase(char* passphrase, const char* ssid, const char* psk);
 
 class WifiDevice
