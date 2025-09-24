@@ -15,10 +15,10 @@ Color Color::GREEN(0x00, 0xFF, 0x00, 0xFF);
 Color Color::BLUE(0x00, 0x00, 0xFF, 0xFF);
 
 Color::Color()
-      : mRed(255),
-        mGreen(255),
-        mBlue(255),
-        mAlpha(255)
+      : mRed(0),
+        mGreen(0),
+        mBlue(0),
+        mAlpha(0)
 {
 }
 

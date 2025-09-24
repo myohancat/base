@@ -13,6 +13,13 @@
 #include <SkPaint.h>
 #include <SkTextBlob.h>
 
+#include "EGLHelper.h"
+#include <sys/mman.h>
+#include <linux/dma-buf.h>
+#include <sys/ioctl.h>
+
+#define USE_DMABUF_FOR_CANVAS
+
 Canvas::Canvas()
        : mWidth(-1),
          mHeight(-1)
@@ -70,8 +77,8 @@ void Canvas::drawImage(Image* img, int x, int y, Rectangle* res, BlendMode_e eMo
     paint.setAlpha(0xFF);
     paint.setStyle(SkPaint::kFill_Style);
     paint.setBlendMode(convBlendMode(eMode));
-    paint.setAntiAlias(true);
-    paint.setDither(true);
+    //paint.setAntiAlias(true);
+    //paint.setDither(true);
 
     if (x < 0)
         x = (mWidth - img->getWidth()) /2;
@@ -143,6 +150,23 @@ void Canvas::drawCircle(const Point& center, int radius, const Color& color, Ble
     mCanvas->restore();
 }
 
+void Canvas::drawLine(const Point& p0, const Point& p1, const Color& color, float strokeWidth, BlendMode_e eMode)
+{
+    if (!mCanvas)
+        return;
+
+    SkPaint paint;
+    SkColor skColor = SkColorSetARGB(color.getAlpha(), color.getRed(), color.getGreen(), color.getBlue());
+
+    paint.setStyle(SkPaint::kStroke_Style);
+    paint.setStrokeWidth(strokeWidth);
+    paint.setColor(skColor);
+    paint.setBlendMode(convBlendMode(eMode));
+
+    mCanvas->drawLine(p0.getX(), p0.getY(), p1.getX(), p1.getY(), paint);
+    mCanvas->restore();
+}
+
 void Canvas::clear(const Color& color)
 {
     if (!mCanvas)
@@ -184,9 +208,36 @@ SkBlendMode Canvas::convBlendMode(BlendMode_e eMode)
 
 bool Canvas::init()
 {
+#ifdef USE_DMABUF_FOR_CANVAS
+    int stride = ALIGN(mWidth, 16) * 4;
+    mSize      = stride * mHeight;
+
+    mDmaBufFD = EGLHelper::create_dma_buf(DRM_FORMAT_RGBA8888, mWidth, mHeight);
+    if (mDmaBufFD == -1)
+        return false;
+
+    mPixels = mmap(nullptr, mSize, PROT_READ | PROT_WRITE, MAP_SHARED, mDmaBufFD, 0);
+    if (mPixels == MAP_FAILED)
+    {
+        LOGE("mmap failed");
+        SAFE_CLOSE(mDmaBufFD);
+        return false;
+    }
+
     std::shared_ptr<SkBitmap> bitmap = std::make_shared<SkBitmap>();
-    bitmap->setInfo(SkImageInfo::Make(mWidth, mHeight, kN32_SkColorType, kPremul_SkAlphaType));
+    SkImageInfo info = SkImageInfo::MakeN32(mWidth, mHeight, kPremul_SkAlphaType);
+    if (!bitmap->installPixels(info, mPixels, stride))
+    {
+        munmap(mPixels, mSize);
+        mPixels = NULL;
+        SAFE_CLOSE(mDmaBufFD);
+        return false;
+    }
+#else
+    std::shared_ptr<SkBitmap> bitmap = std::make_shared<SkBitmap>();
+    bitmap->setInfo(SkImageInfo::MakeN32(mWidth, mHeight, kPremul_SkAlphaType));
     bitmap->allocPixels();
+#endif
 
     std::shared_ptr<SkCanvas> canvas = std::make_shared<SkCanvas>(*bitmap);
     canvas->clear(0x00);
@@ -204,7 +255,15 @@ void Canvas::deinit()
     mCanvas.reset();
     mBitmap.reset();
 
-    // TBD. IMPLEMENTS HERE
+    if (mPixels != NULL)
+        munmap(mPixels, mSize);
+
+    SAFE_CLOSE(mDmaBufFD);
+}
+
+int Canvas::getDmaBufFd()
+{
+    return mDmaBufFD;
 }
 
 void* Canvas::getPixels()

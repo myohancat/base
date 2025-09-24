@@ -62,8 +62,8 @@ public:
 
     void setListener(IWindowListener* listener);
 
-    int getScreenWidth() const;
-    int getScreenHeight() const;
+    virtual int getScreenWidth();
+    virtual int getScreenHeight();
 
     int getX() const;
     int getY() const;
@@ -75,6 +75,7 @@ public:
     void setBackground(const Image& img, bool isUpdate = false);
     void redrawBackground(const Rectangle& rect, bool isUpdate = false);
 
+    void drawLine(const Point& p0, const Point& p1, const Color& color, float stokeWidth = 1.0f);
     void drawRectangle(const Rectangle& rect, const Color& color);
     void drawCircle(const Point& center, int radius, const Color& color);
 
@@ -84,6 +85,13 @@ public:
 
     void setAlpha(float alpha);
     float getAlpha() const;
+
+    void setScale(float scale);
+
+    void setScaleWidth(float scale);
+    void setScaleHeight(float scale);
+    float getScaleWidth() const;
+    float getScaleHeight() const;
 
     void clear();
     void clear(const Rectangle& rect);
@@ -114,6 +122,7 @@ public:
     void onDrawFrame();
     void onSurfaceRemoved();
 
+    int   getDmaBufFd() const;
     void* getPixels() const;
 
 protected:
@@ -135,10 +144,16 @@ protected:
     Image*     mBgImg   = NULL;
     Color*     mBgColor = NULL;
 
+    float       mScaleWidth  = 1.0f;
+    float       mScaleHeight = 1.0f;
+
     typedef std::list<IWidget*> WidgetList;
     WidgetList mWidgetList;
 
 protected:
+    Mutex   mRendererLock;
+    CondVar mCondDestroy;
+
     Mutex   mUpdateLock;
 
     Canvas* getCanvas() const;
@@ -146,7 +161,7 @@ protected:
 protected:
     virtual Animation* enterAnimation();
     virtual Animation* exitAnimation();
- 
+
     bool mDisableAni = false;
     Animation* mDefaultAniEnter = NULL;
     Animation* mDefaultAniExit  = NULL;
@@ -184,14 +199,16 @@ inline void Window::setListener(IWindowListener* listener)
     mWindowListener = listener;
 }
 
-inline int Window::getScreenWidth() const
+inline int Window::getScreenWidth()
 {
-    return RenderService::getInstance().getScreenWidth();
+    return 1920;
+    //return RenderService::getInstance().getScreenWidth();
 }
 
-inline int Window::getScreenHeight() const
+inline int Window::getScreenHeight()
 {
-    return RenderService::getInstance().getScreenHeight();
+    return 1080;
+    //return RenderService::getInstance().getScreenHeight();
 }
 
 inline int Window::getX() const
@@ -261,9 +278,19 @@ inline void Window::drawRectangle(const Rectangle& rect, const Color& color)
     Canvas* canvas = getCanvas();
     if(!canvas)
         return;
-    
+
     Lock lock(canvas);
     canvas->drawRectangle(rect, color);
+}
+
+inline void Window::drawLine(const Point& p0, const Point& p1, const Color& color, float stokeWidth)
+{
+    Canvas* canvas = getCanvas();
+    if(!canvas)
+        return;
+
+    Lock lock(canvas);
+    canvas->drawLine(p0, p1, color, stokeWidth);
 }
 
 inline void Window::drawCircle(const Point& center, int radius, const Color& color)
@@ -271,7 +298,7 @@ inline void Window::drawCircle(const Point& center, int radius, const Color& col
     Canvas* canvas = getCanvas();
     if(!canvas)
         return;
-    
+
     Lock lock(canvas);
     canvas->drawCircle(center, radius, color);
 }
@@ -306,7 +333,8 @@ inline void Window::update()
 {
     Lock lock(mUpdateLock);
     mUpdate = true;
-    //RenderService::getInstance().update();
+    if (RenderService::getInstance().getRenderMode() == RENDER_MODE_WHEN_DIRTY)
+        RenderService::getInstance().update();
 }
 
 inline void Window::update(const Rectangle& rect)
@@ -314,12 +342,22 @@ inline void Window::update(const Rectangle& rect)
     Lock lock(mUpdateLock);
     UNUSED(rect);
     mUpdate = true;
-    //RenderService::getInstance().update();
+    if (RenderService::getInstance().getRenderMode() == RENDER_MODE_WHEN_DIRTY)
+        RenderService::getInstance().update();
 }
 
 inline bool Window::isFocused() const
 {
     return mVisible && !mHiding && mFocused;
+}
+
+inline int Window::getDmaBufFd() const
+{
+    Canvas* canvas = getCanvas();
+    if(!canvas)
+        return -1;
+
+    return canvas->getDmaBufFd();
 }
 
 inline void* Window::getPixels() const
@@ -352,4 +390,28 @@ inline float Window::getAlpha() const
     return mAlpha;
 }
 
+inline void Window::setScale(float scale)
+{
+    mScaleWidth = mScaleHeight = scale;
+}
+
+inline void Window::setScaleWidth(float scale)
+{
+    mScaleWidth = scale;
+}
+
+inline void Window::setScaleHeight(float scale)
+{
+    mScaleHeight = scale;
+}
+
+inline float Window::getScaleWidth() const
+{
+    return mScaleWidth;
+}
+
+inline float Window::getScaleHeight() const
+{
+    return mScaleHeight;
+}
 #endif // __WINDOW_H_

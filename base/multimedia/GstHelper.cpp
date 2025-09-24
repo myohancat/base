@@ -1,5 +1,5 @@
 /**
- * Simple multimedia using gstreamer 
+ * Simple multimedia using gstreamer
  *
  * Author: Kyungyin.Kim < kyungyin.kim@medithinq.com >
  * Copyright (c) 2024, MedithinQ. All rights reserved.
@@ -69,11 +69,9 @@ EGLImage create_egl_image_from_dmabuf(GstMemory* mem, const char* format, int wi
     {
         fourcc = DRM_FORMAT_NV16;
         n_planes = 2;
-        int height2 = mem->maxsize / width / n_planes;
-        height2 = MAX(height2, height);
         offset[0] = 0;
         stride[0] = width;
-        offset[1] = width * height2;
+        offset[1] = width * height;
         stride[1] = width;
     }
 #if 1 /* TODO. rk3588 does not support NV24 for EGL */
@@ -95,9 +93,9 @@ EGLImage create_egl_image_from_dmabuf(GstMemory* mem, const char* format, int wi
     }
 
 #ifdef USE_EGL_IMAGE_KHR
-    EGLint attr[6 + 6*(MAX_NUM_PLANES) + 1] = 
+    EGLint attr[6 + 6*(MAX_NUM_PLANES) + 1] =
 #else
-    EGLAttrib attr[6 + 6*(MAX_NUM_PLANES) + 1] = 
+    EGLAttrib attr[6 + 6*(MAX_NUM_PLANES) + 1] =
 #endif
     {
         EGL_WIDTH, width,
@@ -172,9 +170,9 @@ EGLImage create_egl_image_from_dmabuf(int dmabuf_fd, GstVideoMeta* meta)
     }
 
 #ifdef USE_EGL_IMAGE_KHR
-    EGLint attr[6 + 6*(MAX_NUM_PLANES) + 1] = 
+    EGLint attr[6 + 6*(MAX_NUM_PLANES) + 1] =
 #else
-    EGLAttrib attr[6 + 6*(MAX_NUM_PLANES) + 1] = 
+    EGLAttrib attr[6 + 6*(MAX_NUM_PLANES) + 1] =
 #endif
     {
         EGL_WIDTH,  (EGLint)meta->width,

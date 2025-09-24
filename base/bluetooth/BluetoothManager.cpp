@@ -196,9 +196,22 @@ void BluetoothManager::_start_discovery_reply(DBusMessage *message, void *user_d
     LOGI("Discovery %s", enable == TRUE ? "started" : "stopped");
 }
 
+static bool is_exist_bluetooth_interface(const char* intf)
+{
+    char path[1024];
+    sprintf(path, "/sys/class/bluetooth/%s", intf);
+    if (::access(path, F_OK) == 0)
+        return true;
+
+    return false;
+}
+
 bool BluetoothManager::enable()
 {
 __TRACE__
+    if (!is_exist_bluetooth_interface("hci0"))
+        return false;
+
     ProcessUtil::system("hciconfig hci0 up");
 
 #ifdef CONFIG_SUPPORT_CLI

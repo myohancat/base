@@ -8,60 +8,19 @@
 #include "MainLoop.h"
 
 #include <GLES2/gl2.h>
+#include <GLES2/gl2ext.h>
+#include <EGL/eglext.h>
 #include <algorithm>
 #include <unistd.h>
 #include "ShaderUtil.h"
 #include "SysTime.h"
 #include "Log.h"
 
-#include "WaylandPlatform.h"
-
 #define DELAY_FOR_30_FPS         33 /* 1000ms/30 */
 
 #define MSG_ID_ADD_RENDERER      1
 #define MSG_ID_REMOVE_RENDERER   2
 #define MSG_ID_UPDATE            3
-#define MSG_ID_RENDER_MODE       4
-#define MSG_ID_DISPLAY_ATTACHED  5
-#define MSG_ID_DISPLAY_REMOVED   6
-
-static char VERTEX_SHADER_SRC[] =
-    "#version 300 es\n"
-    "layout(location = 0) in vec4 a_Position;\n"
-    "layout(location = 1) in vec2 a_TexCoords;\n"
-    "out vec2 v_TexCoords;\n"
-    "void main()\n"
-    "{\n"
-    "    gl_Position = a_Position;\n"
-    "    v_TexCoords = a_TexCoords;\n"
-    "}";
-
-static char FRAGMENT_SHADER_SRC[] =
-    "#version 300 es\n"
-    "precision highp float;\n"
-    "in vec2 v_TexCoords;\n"
-    "uniform sampler2D u_Texture;\n"
-    "out vec4 fragColor;\n"
-    "void main()\n"
-    "{\n"
-    "    fragColor = texture(u_Texture, vec2(v_TexCoords.x, v_TexCoords.y));\n"
-    "}";
-
-static float VERTICES[] =
-{
-    -1.0f, +1.0f,
-    +1.0f, +1.0f,
-    -1.0f, -1.0f,
-    +1.0f, -1.0f,
-};
-
-static float TEX_COORDS[] =
-{
-    0.0f, 0.0f,
-    1.0f, 0.0f,
-    0.0f, 1.0f,
-    1.0f, 1.0f
-};
 
 RenderService& RenderService::getInstance()
 {
@@ -71,22 +30,22 @@ RenderService& RenderService::getInstance()
 }
 
 RenderService::RenderService()
-              : Task(1, "RenderService"),
-                mPlatform(NULL)
+              : Task(80, "RenderService")
 {
-    mMsgQ.setEOS(true);
-
     mTimer.setHandler(this);
     DisplayHotplugManager::getInstance().addListener(this);
+
+    if (DisplayHotplugManager::getInstance().isPlugged())
+        onDisplayPlugged();
 }
 
 RenderService::~RenderService()
 {
 __TRACE__
     stop();
+
     DisplayHotplugManager::getInstance().removeListener(this);
     mTimer.setHandler(NULL);
-    SAFE_DELETE(mPlatform);
 }
 
 void RenderService::start()
@@ -101,13 +60,8 @@ void RenderService::stop()
 
 bool RenderService::onPreStart()
 {
-    if (!DisplayHotplugManager::getInstance().isPlugged())
-        return false;
-
     mExitTask = false;
     mMsgQ.setEOS(false);
-
-    mPlatform = new WaylandPlatform();
 
     if (!initEGL())
         return false;
@@ -122,6 +76,7 @@ bool RenderService::onPreStart()
 
 void RenderService::onPreStop()
 {
+__TRACE__
     mExitTask = true;
     mTimer.stop();
     mMsgQ.setEOS(true);
@@ -129,46 +84,35 @@ void RenderService::onPreStop()
 
 void RenderService::onPostStop()
 {
+__TRACE__
     deinitEGL();
-
-    SAFE_DELETE(mPlatform);
 }
 
+#include "EGLHelper.h"
+#include "FrameBuffer.h"
+
+#define MAX_FBO     3
 void RenderService::run()
 {
 __TRACE__
-    if (!eglMakeCurrent(mDisplay, mSurface, mSurface, mContext))
+    if (!eglMakeCurrent(mDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, mContext))
     {
         LOGE("Could not make the current window current !");
         return;
     }
 
-    GLuint texture;
-    GLuint frameBuffer;
+    FrameBuffer* fbos[MAX_FBO];
 
-    mProgram = ShaderUtil::createProgram(VERTEX_SHADER_SRC, FRAGMENT_SHADER_SRC);
-    mAttribPos = glGetAttribLocation(mProgram, "a_Position");
-    mAttribTex = glGetAttribLocation(mProgram, "a_TexCoords");
-
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, OFFSCREEN_WIDTH, OFFSCREEN_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
-
-    glGenFramebuffers(1, &frameBuffer);
-    glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+    CHECK("RenderService : Create FBO %dx%d", OFFSCREEN_WIDTH, OFFSCREEN_HEIGHT);
+    for (int ii = 0; ii < MAX_FBO; ii++)
+        fbos[ii] = new FrameBuffer(DRM_FORMAT_RGB888, OFFSCREEN_WIDTH, OFFSCREEN_HEIGHT);
 
     mRendererLock.lock();
     for (RendererList::iterator it = mRenderers.begin(); it != mRenderers.end(); it++)
         (*it)->onSurfaceCreated(OFFSCREEN_WIDTH, OFFSCREEN_HEIGHT);
     mRendererLock.unlock();
 
+    int index = -1;
     Msg msg;
     while(!mExitTask)
     {
@@ -193,30 +137,37 @@ __TRACE__
             }
             case MSG_ID_UPDATE:
             {
-                bool forceToDraw = msg.arg;
-                bool isNeedToDraw = false;
+                //if (mRenderMode != RENDER_MODE_CONTINUOUSLY)
+                //{
+                    Lock lock(mRendererLock);
 
-                mRendererLock.lock();
-                for(RendererList::iterator it = mRenderers.begin(); it != mRenderers.end(); it++)
-                {
-                    if ((*it)->isNeedToDraw())
+                    bool forceToDraw = msg.arg;
+                    bool isNeedToDraw = false;
+
+                    for(RendererList::iterator it = mRenderers.begin(); it != mRenderers.end(); it++)
                     {
-                        isNeedToDraw = true;
-                        break;
+                        if ((*it)->isNeedToDraw())
+                        {
+                            isNeedToDraw = true;
+                            break;
+                        }
                     }
-                }
-                mRendererLock.unlock();
 
-                if (!forceToDraw && !isNeedToDraw)
-                    continue;
+                    if (!forceToDraw && !isNeedToDraw)
+                        continue;
+                //}
 
-                /* OFF SCREEN RENDERING */
-                glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
-                
+                index = (index + 1) % MAX_FBO;
+
+                fbos[index]->bind();
+
                 glViewport(0, 0, OFFSCREEN_WIDTH, OFFSCREEN_HEIGHT);
 
                 glEnable(GL_BLEND);
                 glDisable(GL_DEPTH_TEST);
+                glDisable(GL_CULL_FACE);
+                glDisable(GL_DITHER);
+
                 glClearColor(0, 0, 0, 0);  // TransParent
                 glClear(GL_COLOR_BUFFER_BIT);
 
@@ -224,60 +175,61 @@ __TRACE__
                 for(RendererList::iterator it = mRenderers.begin(); it != mRenderers.end(); it++)
                     (*it)->onDrawFrame();
                 mRendererLock.unlock();
-    
-                forceToDraw = false;
 
-                /* ON SCREEN RENDERERING */
-                glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                glFinish();
 
-                glViewport(0, 0, mRealScreenWidth, mRealScreenHeight);
+                if (fbos[index]->dmabuf() != -1)
+                {
+                    Lock lock(mRendererLock);
 
-                glDisable(GL_BLEND);
-                glDisable(GL_DEPTH_TEST);
+                    if (mOnDisplayRenderer)
+                        mOnDisplayRenderer->update(fbos[index]->dmabuf(), DRM_FORMAT_RGB888, OFFSCREEN_WIDTH, OFFSCREEN_HEIGHT);
 
-                glUseProgram(mProgram);
-
-                glVertexAttribPointer(mAttribPos, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), VERTICES);
-                glVertexAttribPointer(mAttribTex, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), TEX_COORDS);
-
-                glEnableVertexAttribArray(mAttribPos);
-                glEnableVertexAttribArray(mAttribTex);
-
-                glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_2D, texture);
-
-                //glDrawElements(GL_TRIANGLES, sizeof(INDICES) / sizeof(INDICES[0]), GL_UNSIGNED_SHORT, INDICES);
-                glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-                //eglSwapInterval(mDisplay, 1);
-                eglSwapBuffers(mDisplay, mSurface);
-
-                //int diff = SysTime::getTickCountMs() - startTime;
-                //if (diff > 10)
-                //    LOGD("diff : %d", diff);
-
-                mRendererLock.lock();
-                for(ObserverList::iterator it = mObservers.begin(); it != mObservers.end(); it++)
-                    (*it)->onRenderCompleted(texture);
-                mRendererLock.unlock();
-
+                    for(ObserverList::iterator it = mObservers.begin(); it != mObservers.end(); it++)
+                        (*it)->onRenderCompleted(fbos[index]->dmabuf(), DRM_FORMAT_RGB888, OFFSCREEN_WIDTH, OFFSCREEN_HEIGHT);
+                }
                 break;
             }
         }
     }
-
-    glDisableVertexAttribArray(mAttribPos);
-    glDisableVertexAttribArray(mAttribTex);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glUseProgram(0);
 
     mRendererLock.lock();
     for(RendererList::iterator it = mRenderers.begin(); it != mRenderers.end(); it++)
         (*it)->onSurfaceRemoved();
     mRendererLock.unlock();
 
-    glDeleteFramebuffers(1, &frameBuffer);
-    glDeleteTextures(1, &texture);
+    for (int ii = 0; ii < MAX_FBO; ii++)
+    {
+        SAFE_DELETE(fbos[ii]);
+    }
+}
+
+#include <EGL/eglext.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <gbm.h>
+
+static EGLDisplay _getDisplay()
+{
+    int rfd = open("/dev/dri/card0", O_RDWR | O_CLOEXEC);
+    if (rfd < 0)
+    {
+        LOGE("rfd cannot open");
+        return NULL;
+    }
+
+    gbm_device* gbm = gbm_create_device(rfd); // TODO MUST DESTROYED
+    if (!gbm)
+    {
+        LOGE("gbm is NULL");
+        return NULL;
+    }
+
+    PFNEGLGETPLATFORMDISPLAYEXTPROC gpd = (PFNEGLGETPLATFORMDISPLAYEXTPROC)eglGetProcAddress("eglGetPlatformDisplayEXT");
+    EGLDisplay dpy = gpd(EGL_PLATFORM_GBM_KHR, gbm, NULL);
+
+    return dpy;
 }
 
 bool RenderService::initEGL()
@@ -287,25 +239,7 @@ bool RenderService::initEGL()
     EGLint    minorVersion;
     EGLConfig config;
 
-    EGLint contextAttribs[] = { EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE, EGL_NONE };
-
-    EGLint attribs[] =
-    {
-        EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
-        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
-        EGL_RED_SIZE,        8,
-        EGL_GREEN_SIZE,      8,
-        EGL_BLUE_SIZE,       8,
-//      EGL_ALPHA_SIZE,      8,
-        EGL_NONE
-    };
-
-    mDisplay = mPlatform->getEGLDisplay();
-    if (!mDisplay)
-    {
-        mDisplay = eglGetDisplay(mPlatform->getDisplay());
-    }
-
+    mDisplay = _getDisplay();
     if (mDisplay == EGL_NO_DISPLAY)
     {
         LOGE("failed to get EGLDisplay ...");
@@ -317,6 +251,23 @@ bool RenderService::initEGL()
         LOGE("failed to EGL Initialize ...");
         return false;
     }
+
+    LOGD("init success");
+    if (!eglBindAPI(EGL_OPENGL_ES_API))
+    {
+        LOGE("eglBindAPI GLES failed (0x%x)", eglGetError());
+        return false;
+    }
+
+    const  EGLint attribs[] =
+    {
+        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT,
+        EGL_RED_SIZE,        8,
+        EGL_GREEN_SIZE,      8,
+        EGL_BLUE_SIZE,       8,
+        EGL_ALPHA_SIZE,      0,
+        EGL_NONE
+    };
 
     if ((eglGetConfigs(mDisplay, NULL, 0, &numConfigs) != EGL_TRUE) || (numConfigs == 0))
     {
@@ -330,13 +281,7 @@ bool RenderService::initEGL()
         return false;
     }
 
-    mSurface = eglCreateWindowSurface(mDisplay, config, mPlatform->getWindow(), NULL);
-    if (mSurface == EGL_NO_SURFACE)
-    {
-        LOGE("failed to create EGLSurface");
-        return false;
-    }
-
+    const  EGLint contextAttribs[] = { EGL_CONTEXT_CLIENT_VERSION, 3, EGL_NONE, EGL_NONE };
     mContext = eglCreateContext(mDisplay, config, NULL, contextAttribs);
     if (mContext == EGL_NO_CONTEXT)
     {
@@ -344,17 +289,13 @@ bool RenderService::initEGL()
         return false;
     }
 
-    eglQuerySurface(mDisplay, mSurface, EGL_WIDTH, &mRealScreenWidth);
-    eglQuerySurface(mDisplay, mSurface, EGL_HEIGHT, &mRealScreenHeight);
-    
-    LOGI("Screen %dx%d", mRealScreenWidth, mRealScreenHeight);
-
     return true;
 }
 
 
 void RenderService::addRenderer(IRenderable* renderer)
 {
+__TRACE__
     Lock lock(mRendererLock);
 
     if(!renderer)
@@ -366,8 +307,11 @@ void RenderService::addRenderer(IRenderable* renderer)
 
     mRenderers.push_back(renderer);
     mRenderers.sort(IRenderable::compare);
-    Msg msg(MSG_ID_ADD_RENDERER, renderer);
-    mMsgQ.put(msg, -1);
+    if (state() == TASK_STATE_RUNNING)
+    {
+        Msg msg(MSG_ID_ADD_RENDERER, renderer);
+        mMsgQ.put(msg, -1);
+    }
 }
 
 void RenderService::removeRenderer(IRenderable* renderer)
@@ -382,8 +326,11 @@ void RenderService::removeRenderer(IRenderable* renderer)
         {
             mRenderers.erase(it);
             mRenderers.sort(IRenderable::compare);
-            Msg msg(MSG_ID_REMOVE_RENDERER, renderer);
-            mMsgQ.put(msg, -1);
+            if (state() == TASK_STATE_RUNNING)
+            {
+                Msg msg(MSG_ID_REMOVE_RENDERER, renderer);
+                mMsgQ.put(msg, -1);
+            }
             return;
         }
     }
@@ -430,15 +377,12 @@ void RenderService::setRenderMode(RenderMode_e eMode)
     if (mRenderMode == eMode)
         return;
 
-    if (state() != TASK_STATE_RUNNING)
-        return;
-
-    mRenderMode = eMode;
-
     if (eMode == RENDER_MODE_CONTINUOUSLY)
         mTimer.start(DELAY_FOR_30_FPS, true);
     else
         mTimer.stop();
+
+    mRenderMode = eMode;
 }
 
 void RenderService::sortRenderer()
@@ -451,33 +395,42 @@ void RenderService::onTimerExpired(const ITimer* timer)
 {
     UNUSED(timer);
 
-    update();
+    Msg msg(MSG_ID_UPDATE, false);
+    mMsgQ.remove(MSG_ID_UPDATE);
+    mMsgQ.put(msg);
 }
 
 void RenderService::onDisplayPlugged()
 {
-    start();
-    
-    Msg msg(MSG_ID_UPDATE, true);
-    mMsgQ.put(msg);
+    Lock lock(mRendererLock);
+    CHECK("@@@@@@@@@@ onDisplayPlugged()");
+
+    SAFE_DELETE(mOnDisplayRenderer);
+    mOnDisplayRenderer = new OnDisplayRenderer();
+    update();
 }
 
 void RenderService::onDisplayRemoved()
 {
-    stop();
+    Lock lock(mRendererLock);
+    CHECK("@@@@@@@@@@ onDisplayRemoved()");
+
+    SAFE_DELETE(mOnDisplayRenderer);
 }
 
 void RenderService::update(bool forceToDraw)
 {
+    Lock lock(mRendererLock);
+
+    if (mRenderMode == RENDER_MODE_CONTINUOUSLY)
+        return;
+
     Msg msg(MSG_ID_UPDATE, forceToDraw);
-    if (!mMsgQ.put(msg, 0))
-    {
-        if (mMsgQ.isFull())
-            LOGW("MsgQ is full.. drop it.");
-    }
+    mMsgQ.remove(MSG_ID_UPDATE);
+    mMsgQ.put(msg);
 }
 
 void RenderService::deinitEGL()
 {
-    eglDestroySurface(mDisplay, mSurface);
+    // TODO
 }

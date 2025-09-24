@@ -31,6 +31,7 @@ class GPIO
 {
 public:
     static GPIO* open(int num);
+    static GPIO* open(int num, const std::string ioname);
     virtual ~GPIO() { }
 
     GPIO_Dir_e   getOutDir();
@@ -51,13 +52,16 @@ public:
 
 protected:
     GPIO(int num);
+    GPIO(int num, const std::string ioname);
 
 protected:
     static bool _export(int num);
+    static bool _export(std::string ioname);
     static bool _exist(int num);
+    static bool _exist(std::string ioname);
 
 private:
-    int  mNum;
+    int         mNum;
     std::string mPath;
 };
 

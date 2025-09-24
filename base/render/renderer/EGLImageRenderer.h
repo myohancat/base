@@ -13,21 +13,24 @@
 #include <GLES2/gl2.h>
 #include <errno.h>
 
-#include "RendererCommon.h"
+#include "Renderer.h"
 
-class EGLImageRenderer
+class EGLImageRenderer : public IRenderer
 {
 public:
     EGLImageRenderer(float alpha = 1, ColorMode_e eMode = COLOR_MODE_RGBA);
     virtual ~EGLImageRenderer();
 
-    void setView(int x, int y, int width, int height);
-    void setAlpha(float alpha);
     void setColorMode(ColorMode_e eMode);
-
+    void setView(int x, int y, int width, int height);
+    void setCrop(int x, int y, int width, int height);
+    void setAlpha(float alpha);
     void setMVP(float* mvp);
 
-    void onDraw(EGLImageKHR image);
+    void draw(ImageFrame* image);
+
+protected:
+    void applyCrop(int imgWidth, int imgHeight);
 
 protected:
     Mutex  mLock;
@@ -36,6 +39,11 @@ protected:
     int    mY;
     int    mWidth;
     int    mHeight;
+
+    int    mCropX;
+    int    mCropY;
+    int    mCropWidth;
+    int    mCropHeight;
 
     GLuint mProgram;
     GLuint mAttribPos;
@@ -47,8 +55,9 @@ protected:
     GLuint mUniformMVP;
     GLuint mUniformTexture;
 
-    float        mMVP[16];
-    float        mAlpha;
+    float  mMVP[16];
+    float  mTexCoords[8];
+    float  mAlpha;
     ColorMode_e  mColorMode;
 };
 

@@ -9,20 +9,12 @@
 #include <unistd.h>
 #include "Log.h"
 
-#define I2C_BUS         (6)
-#define I2C_SLAVE_ADDR  (0x50)
-
-#if 1 
-#define EEPROM_SIZE     (64 * 1024)
-#define MAX_PAGE_SIZE   (32)
-#else
-#define EEPROM_SIZE     (256 * 1024)
-#define MAX_PAGE_SIZE   (64)
-#endif
-
-EEPROM::EEPROM()
+EEPROM::EEPROM(int i2cNum, uint8_t slaveAddr, int totalSize, int pageSize)
+       : mSlaveAddr(slaveAddr),
+         mTotalSize(totalSize),
+         mPageSize(pageSize)
 {
-    mI2C = I2C::open(I2C_BUS);
+    mI2C = I2C::open(i2cNum);
 }
 
 EEPROM::~EEPROM()
@@ -32,18 +24,18 @@ EEPROM::~EEPROM()
 
 int EEPROM::getSize()
 {
-    return EEPROM_SIZE;
+    return mTotalSize;
 }
 
 bool EEPROM::writeByte(uint16_t memAddr, uint8_t val)
 {
-    if (memAddr > EEPROM_SIZE - 1)
+    if (memAddr > mTotalSize - 1)
     {
         LOGE("Invalid address : 0x%04x", memAddr);
         return false;
     }
 
-    if (mI2C->write(I2C_SLAVE_ADDR, memAddr, &val, 1) == 0)
+    if (mI2C->write(mSlaveAddr, memAddr, &val, 1) == 0)
         return true;
 
     return false;
@@ -51,13 +43,13 @@ bool EEPROM::writeByte(uint16_t memAddr, uint8_t val)
 
 bool EEPROM::readByte(uint16_t memAddr, uint8_t* val)
 {
-    if (memAddr > EEPROM_SIZE - 1)
+    if (memAddr > mTotalSize - 1)
     {
         LOGE("Invalid address : 0x%04x", memAddr);
         return false;
     }
 
-    if (mI2C->read(I2C_SLAVE_ADDR, memAddr, val, 1) == 0)
+    if (mI2C->read(mSlaveAddr, memAddr, val, 1) == 0)
         return true;
 
     return false;
@@ -67,31 +59,31 @@ bool EEPROM::writeBytes(uint16_t memAddr, void* buf, int len)
 {
     int wtotal = 0;
     int wsize  = 0;
-    
-    if (memAddr + len > EEPROM_SIZE)
+
+    if (memAddr + len > mTotalSize)
     {
         LOGE("data is too big to write");
         return false;
     }
 
-    int startSize = ((memAddr / MAX_PAGE_SIZE + 1) * MAX_PAGE_SIZE) - memAddr;
-    int pageCnt = ((len - 1) / MAX_PAGE_SIZE) + 1;
+    int startSize = ((memAddr / mPageSize + 1) * mPageSize) - memAddr;
+    int pageCnt = ((len - 1) / mPageSize) + 1;
 
     for (int ii = 0; ii < pageCnt; ii++)
     {
         if (ii == 0)
             wsize = (len > startSize) ? startSize : len;
         else
-            wsize = (len > MAX_PAGE_SIZE) ? MAX_PAGE_SIZE : len;
+            wsize = (len > mPageSize) ? mPageSize : len;
 
-        if (mI2C->write(I2C_SLAVE_ADDR, (uint16_t)(memAddr + wtotal), (uint8_t*)buf + wtotal, wsize))
+        if (mI2C->write(mSlaveAddr, (uint16_t)(memAddr + wtotal), (uint8_t*)buf + wtotal, wsize))
             break;
 
         usleep(10*1000);
         wtotal += wsize;
         len -= wsize;
     }
- 
+
     if (len == 0)
         return true;
 
@@ -102,7 +94,7 @@ bool EEPROM::readBytes(uint16_t memAddr, void* buf, int len)
 {
     int rtotal = 0;
 
-    if (memAddr + len > EEPROM_SIZE)
+    if (memAddr + len > mTotalSize)
     {
         LOGE("data is too big to read");
         return false;
@@ -110,9 +102,9 @@ bool EEPROM::readBytes(uint16_t memAddr, void* buf, int len)
 
     while(len > 0)
     {
-        int rsize = (len > MAX_PAGE_SIZE)? MAX_PAGE_SIZE: len;
+        int rsize = (len > mPageSize)? mPageSize: len;
 
-        if (mI2C->read(I2C_SLAVE_ADDR, (uint16_t)(memAddr + rtotal), (uint8_t*)buf + rtotal, rsize))
+        if (mI2C->read(mSlaveAddr, (uint16_t)(memAddr + rtotal), (uint8_t*)buf + rtotal, rsize))
             break;
 
         rtotal += rsize;

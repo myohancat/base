@@ -23,7 +23,7 @@
 #define MSG_ID_USB_REMOVE   1
 
 static uint32_t  gBitmapId = 0;
-#define MAX_ID   (sizeof(gBitmapId) * 8) 
+#define MAX_ID   (sizeof(gBitmapId) * 8)
 
 static int alloc_id()
 {
@@ -40,13 +40,13 @@ static int alloc_id()
     return -1;
 }
 
-static void set_id(int id) 
+static void set_id(int id)
 {
     uint32_t mask = (0x01 << id);
     gBitmapId |= mask;
 }
 
-static void release_id(int id) 
+static void release_id(int id)
 {
     uint32_t mask = (0x01 << id);
     gBitmapId &= (~mask);
@@ -81,12 +81,12 @@ static bool get_fstype(const char* name, char* fstype)
         if (index == 1)
         {
             strcpy(fstype, trim(line));
-            ret = true;           
+            ret = true;
         }
 
        index++;
     }
-    
+
     pclose(fp);
 
     return ret;
@@ -97,7 +97,7 @@ static bool get_fstype(const char* name, char* fstype)
 static bool is_exist_dir(const char* path)
 {
     struct stat sb;
-    if (stat(path, &sb) == 0 && S_ISDIR(sb.st_mode)) 
+    if (stat(path, &sb) == 0 && S_ISDIR(sb.st_mode))
         return true;
 
     return false;
@@ -107,7 +107,7 @@ static bool is_exist_dir(const char* path)
 static bool mount_device(const char* dev_name, const char* fstype, const char* mount_point)
 {
     char dev[64];
-   
+
     if (!is_exist_dir(mount_point))
     {
         if (mkdir(mount_point, 0777))
@@ -162,7 +162,7 @@ static void umount_all()
             umount_device(p);
         }
     }
-    
+
     pclose(fp);
 }
 
@@ -170,7 +170,7 @@ static int get_usb_disk_list(std::vector<std::string>& devList)
 {
     char line[1024];
     FILE* fp = fopen("/proc/partitions", "r");
-    
+
     if (!fp)
         return 0;
 
@@ -196,7 +196,7 @@ static const char* get_mount_dir(const char* dev, char* mount_dir)
     char path[1024];
 
     FILE* fp = fopen("/proc/mounts", "r");
-    
+
     if (!fp)
         return 0;
 
@@ -343,7 +343,7 @@ void UsbStorageManager::run()
         if (mMsgQ.get(&msg))
         {
             char* name = (char*)msg.mParam;
-    
+
             if (msg.mId == MSG_ID_USB_ADD)
             {
                 if (mMountPoints.find(name) == mMountPoints.end())

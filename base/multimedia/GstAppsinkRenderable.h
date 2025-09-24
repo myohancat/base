@@ -1,7 +1,8 @@
 /**
- * Simple multimedia using gstreamer 
+ * Simple multimedia using gstreamer
  *
  * Author: Kyungyin.Kim < kyungyin.kim@medithinq.com >
+ * Author: Soyun.Park   < sypark@medithinq.com >
  * Copyright (c) 2024, MedithinQ. All rights reserved.
  */
 #ifndef __GST_APP_SINK_RENDERABLE_H_
@@ -25,12 +26,16 @@ public:
     GstAppsinkRenderable();
     ~GstAppsinkRenderable();
 
+    void setAlpha(float alpha);
     void setView(int x, int y, int width, int height);
+    void setCrop(int x, int y, int width, int height);
+    void setMVP(float* mvp);
+
     void setZOrder(int zorder);
 
 protected:
-    bool start();
-    void stop();
+    bool startRenderer();
+    void stopRenderer();
 
     virtual GstElement* createGstPipeline()  = 0;
     virtual GstElement* getAppSink()         = 0;
@@ -40,7 +45,10 @@ protected:
     virtual bool onBuffer(UNUSED_PARAM GstSample* sample) { return false; };
     virtual void onEOS() { };
 
+    virtual void requestUpdate();
+
 protected:
+    std::unordered_map<int, EGLImage> mFrameCache;
     EGLImageRenderer*  mRenderer;
 
 private:
@@ -58,7 +66,7 @@ private:
         protected:
             void dispose(GstSample* sample)
             {
-                LOGD("Drop.");
+                //LOGD("Drop.");
                 gst_sample_unref(sample);
             }
     };
@@ -69,7 +77,16 @@ private:
 
     int          mZorder;
     bool         mVisible;
+
+    float        mAlpha;
     Rectangle    mRectView;
+    Rectangle    mRectCrop;
+    float        mMVP[16] = {
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1,
+    };
 
     GstSampleQueue mSampleQueue;
 
@@ -83,9 +100,42 @@ private:
     static void onEOS(GstAppSink* sink, void* user_data);
 };
 
+inline void GstAppsinkRenderable::setAlpha(float alpha)
+{
+    Lock lock(mLock);
+
+    mAlpha = alpha;
+    if (mRenderer)
+        mRenderer->setAlpha(alpha);
+}
+
 inline void GstAppsinkRenderable::setView(int x, int y, int width, int height)
 {
+    Lock lock(mLock);
+
     mRectView.setRectangle(x, y, width, height);
+    if (mRenderer)
+        mRenderer->setView(x, y, width, height);
+}
+
+inline void GstAppsinkRenderable::setCrop(int x, int y, int width, int height)
+{
+    Lock lock(mLock);
+
+    mRectCrop.setRectangle(x, y, width, height);
+    if (mRenderer)
+        mRenderer->setCrop(x, y, width, height);
+}
+
+inline void GstAppsinkRenderable::setMVP(float* mvp)
+{
+    Lock lock(mLock);
+
+    for(int ii = 0; ii < 16; ii++)
+        mMVP[ii] = mvp[ii];
+
+    if (mRenderer)
+        mRenderer->setMVP(mvp);
 }
 
 inline int GstAppsinkRenderable::getZOrder()

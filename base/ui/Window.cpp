@@ -80,7 +80,7 @@ void Window::WindowEventQueue::onEventReceived(int id, void* data, int dataLen)
         case CONTAINER_REQUEST_MESSAGE:
         {
             WindowMessage* msg = (WindowMessage*)data;
-            
+
             if (msg->mWindow != NULL)
                 msg->mWindow->onMessageReceived(msg->mMessageId, msg->mParam);
             break;
@@ -99,19 +99,16 @@ Window::Window(int zOrder, int width, int height, float alpha)
             mBgImg(NULL),
             mBgColor(NULL)
 {
-    int screenWidth = RenderService::getInstance().getScreenWidth();
-    int screenHeight = RenderService::getInstance().getScreenHeight();
-
-    mX = (screenWidth - width) / 2;
-    mY = (screenHeight- height) / 2;
+    mX = (getScreenWidth() - width) / 2;
+    mY = (getScreenHeight()- height) / 2;
 
     if(width < 0)
-        mWidth = screenWidth;
+        mWidth = getScreenWidth();
     else
         mWidth = width;
 
     if(height < 0)
-        mHeight= screenHeight;
+        mHeight= getScreenHeight();
     else
         mHeight = height;
 
@@ -131,29 +128,26 @@ Window::Window(int zOrder, int x, int y, int width, int height, float alpha)
             mBgImg(NULL),
             mBgColor(NULL)
 {
-    int screenWidth = RenderService::getInstance().getScreenWidth();
-    int screenHeight = RenderService::getInstance().getScreenHeight();
-
     if(width < 0)
-        mWidth = screenWidth;
+        mWidth = getScreenWidth();
     else
         mWidth = width;
 
     if(height < 0)
-        mHeight= screenHeight;
+        mHeight= getScreenHeight();
     else
         mHeight = height;
 
     if (mX < 0)
     {
-        mX = (screenWidth - mWidth) / 2;
+        mX = (getScreenWidth() - mWidth) / 2;
         if (mX < 0)
             mX = 0;
     }
 
     if (mY < 0)
     {
-        mY = (screenHeight - mHeight) / 2;
+        mY = (getScreenHeight() - mHeight) / 2;
         if (mY < 0)
             mY = 0;
     }
@@ -168,7 +162,13 @@ Window::~Window()
 {
     //if (mWindowListener)
     //    mWindowListener->onDestroy(this);
-    RenderService::getInstance().removeRenderer(this);
+    {
+        RenderService::getInstance().removeRenderer(this);
+
+        Lock lock(mRendererLock);
+        if (mRenderer)
+            mCondDestroy.wait(mRendererLock, 100);
+    }
 
     SAFE_DELETE(mBgImg);
     SAFE_DELETE(mBgColor);
@@ -424,6 +424,8 @@ void Window::onSurfaceCreated(int screenWidth, int screenHeight)
     UNUSED(screenWidth);
     UNUSED(screenHeight);
 
+    Lock lock(mRendererLock);
+
     mRenderer = new WindowRenderer(this);
     update();
 }
@@ -438,21 +440,31 @@ void Window::onDrawFrame()
         return;
     }
 
+    /* TODO. Check it */
+    if (!mRenderer)
+    {
+        //LOGE("[FATAL] Failed to draw. renderer is null.");
+        return;
+    }
+
     if (mUpdate)
     {
-        Canvas* canvas = getCanvas(); 
+        Canvas* canvas = getCanvas();
         Lock lock(canvas);
-        mRenderer->onDraw(canvas->getPixels());
+        mRenderer->draw(canvas->getPixels());
     }
     else
-        mRenderer->onDraw(NULL);
+        mRenderer->draw(NULL);
 
     mUpdate = false;
 }
 
 void Window::onSurfaceRemoved()
 {
+    Lock lock(mRendererLock);
+
     SAFE_DELETE(mRenderer);
+    mCondDestroy.signal();
 }
 
 Animation* Window::enterAnimation()

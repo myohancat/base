@@ -13,22 +13,21 @@
 #include <GLES2/gl2.h>
 #include <errno.h>
 
-#include "RendererCommon.h"
+#include "Renderer.h"
 
-class RawRGBARenderer
+class RawRGBARenderer : public IRenderer
 {
 public:
     RawRGBARenderer(float alpha = 1, ColorMode_e eMode = COLOR_MODE_RGBA);
     virtual ~RawRGBARenderer();
 
-    void setView(int x, int y, int width, int height);
-
-    void setAlpha(float alpha);
     void setColorMode(ColorMode_e eMode);
-
+    void setView(int x, int y, int width, int height);
+    void setCrop(int x, int y, int width, int height);
+    void setAlpha(float alpha);
     void setMVP(float* mvp);
 
-    void onDraw(RawImageFrame* frame);
+    void draw(ImageFrame* frame);
 
 protected:
     Mutex  mLock;
@@ -61,6 +60,15 @@ inline void RawRGBARenderer::setView(int x, int y, int width, int height)
     mY = y;
     mWidth = width;
     mHeight = height;
+}
+
+inline void RawRGBARenderer::setCrop(int x, int y, int width, int height)
+{
+    /* TODO. IMPLEMENTS HERE */
+    UNUSED(x);
+    UNUSED(y);
+    UNUSED(width);
+    UNUSED(height);
 }
 
 #endif // __RAW_RGBA_RENDERER_H_

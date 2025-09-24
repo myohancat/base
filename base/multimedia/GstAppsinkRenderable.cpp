@@ -1,7 +1,8 @@
 /**
- * Simple multimedia using gstreamer 
+ * Simple multimedia using gstreamer
  *
  * Author: Kyungyin.Kim < kyungyin.kim@medithinq.com >
+ * Author: Soyun.Park   < sypark@medithinq.com >
  * Copyright (c) 2024, MedithinQ. All rights reserved.
  */
 #include "GstAppsinkRenderable.h"
@@ -22,6 +23,7 @@ GstAppsinkRenderable::GstAppsinkRenderable()
             mIsRunning(false),
             mZorder(10),
             mVisible(false),
+            mAlpha(1.0f),
             mPipeline(NULL)
 {
     GstHelper::initialize();
@@ -30,11 +32,12 @@ GstAppsinkRenderable::GstAppsinkRenderable()
 GstAppsinkRenderable::~GstAppsinkRenderable()
 {
     mVisible = false;
-    stop();
+    stopRenderer();
 }
 
-bool GstAppsinkRenderable::start()
+bool GstAppsinkRenderable::startRenderer()
 {
+__TRACE__
     Lock lock(mLock);
     if (mIsRunning)
         return false;
@@ -70,11 +73,11 @@ bool GstAppsinkRenderable::start()
 
     RenderService::getInstance().addRenderer(this);
 
-    mIsRunning = true;   
+    mIsRunning = true;
     return true;
 }
 
-void GstAppsinkRenderable::stop()
+void GstAppsinkRenderable::stopRenderer()
 {
     if (!mIsRunning)
         return;
@@ -97,6 +100,13 @@ void GstAppsinkRenderable::stop()
 
     destroyGstPipeline();
 
+    for (std::unordered_map<int,EGLImage>::iterator it = mFrameCache.begin(); it != mFrameCache.end() ; it++)
+    {
+        EGLImage image = it->second;
+        GstHelper::destroy_egl_image(image);
+    }
+    mFrameCache.clear();
+
     mIsRunning = false;
 }
 
@@ -108,11 +118,21 @@ bool GstAppsinkRenderable::isNeedToDraw()
 void GstAppsinkRenderable::onSurfaceCreated(int screenWidth, int screenHeight)
 {
 __TRACE__
-    EGLImageRenderer* renderer = new EGLImageRenderer();
-    renderer->setView(0, 0, screenWidth, screenHeight);
-    
     Lock lock(mLock);
-    mRenderer = renderer;
+
+    mRenderer = new EGLImageRenderer();
+    mRenderer->setAlpha(mAlpha);
+    mRenderer->setMVP(mMVP);
+
+    if (mRectView.isValid())
+        mRenderer->setView(mRectView.getX(), mRectView.getY(), mRectView.getWidth(), mRectView.getHeight());
+    else
+        mRenderer->setView(0, 0, screenWidth, screenHeight);
+
+    if (mRectCrop.isValid())
+        mRenderer->setCrop(mRectCrop.getX(), mRectCrop.getY(), mRectCrop.getWidth(), mRectCrop.getHeight());
+    else
+        mRenderer->setCrop(0, 0, 0, 0);
 }
 
 #if defined(CONFIG_SOC_XAVIER_NX)
@@ -126,14 +146,14 @@ void GstAppsinkRenderable::onDrawFrame()
     GstSample* sample;
     if (!mSampleQueue.get(&sample, 0))
     {
-        mRenderer->onDraw(NULL);
+        mRenderer->draw(NULL);
         return;
     }
 
     GstBuffer* buffer = gst_sample_get_buffer(sample);
     GstCaps* gstCaps = gst_sample_get_caps(sample);
     GstStructure* gstCapsStruct = gst_caps_get_structure(gstCaps, 0);
-    
+
     int width;
     int height;
     bool needToDestroy = false;
@@ -141,7 +161,7 @@ void GstAppsinkRenderable::onDrawFrame()
     {
         GstVideoMeta* meta = gst_buffer_get_video_meta(buffer);
         GstMemory* mem = gst_buffer_peek_memory(buffer, 0);
-    
+
         GstMapInfo map;
         gst_buffer_map(buffer, &map, GST_MAP_READ);
 
@@ -151,18 +171,25 @@ void GstAppsinkRenderable::onDrawFrame()
 
         /* Get eglImage */
         EGLImage image = NULL;
-        if (gst_caps_features_contains(gstCapsFeatures, "memory:DMABuf") 
+        if (gst_caps_features_contains(gstCapsFeatures, "memory:DMABuf")
          || gst_caps_features_contains(gstCapsFeatures, "memory:SystemMemory"))
         {
             if (gst_is_dmabuf_memory(mem))
             {
                 int dmabuf_fd = gst_dmabuf_memory_get_fd(mem);
-                if (meta)
-                    image = GstHelper::create_egl_image_from_dmabuf(dmabuf_fd, meta);
-                else
-                    image = GstHelper::create_egl_image_from_dmabuf(mem, format, width, height);
+                if (mFrameCache.find(dmabuf_fd) == mFrameCache.end())
+                {
+                    if (meta)
+                        image = GstHelper::create_egl_image_from_dmabuf(dmabuf_fd, meta);
+                    else
+                        image = GstHelper::create_egl_image_from_dmabuf(mem, format, width, height);
 
-                needToDestroy = true;
+                    mFrameCache[dmabuf_fd] = image;
+                }
+                else
+                    image = mFrameCache[dmabuf_fd];
+
+                needToDestroy = false;
             }
         }
         else if (gst_caps_features_contains(gstCapsFeatures, "memory:GLMemory"))
@@ -186,10 +213,15 @@ void GstAppsinkRenderable::onDrawFrame()
         /* Draw eglImage */
         if (image)
         {
-            if (mRectView.isValid())
-                mRenderer->setView(mRectView.getX(), mRectView.getY(), mRectView.getWidth(), mRectView.getHeight());
+            ImageFrame frame;
+            frame.mFmt = PIXEL_FORMAT_NOT_SUPPORT; // TODO
+            frame.mWidth = width;
+            frame.mHeight = height;
+            frame.mMemType = MEM_TYPE_EGL;
+            frame.mEglImg = image;
 
-            mRenderer->onDraw(image);
+            mRenderer->draw(&frame);
+            //glFinish();
 
 #if defined(CONFIG_SOC_XAVIER_NX)
             if (gst_caps_features_contains(gstCapsFeatures, "memory:NVMM"))
@@ -268,9 +300,14 @@ GstFlowReturn GstAppsinkRenderable::onBuffer(GstAppSink* sink, void* user_data)
         return GST_FLOW_OK;
     }
 
-    RenderService::getInstance().update();
+    pThis->requestUpdate();
 
     return GST_FLOW_OK;
+}
+
+void GstAppsinkRenderable::requestUpdate()
+{
+    RenderService::getInstance().update();
 }
 
 // Need to EGLContext

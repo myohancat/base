@@ -16,23 +16,11 @@
 #include <list>
 
 #include "Task.h"
-#include "Queue.h"
+#include "MsgQ.h"
 #include "TimerTask.h"
 #include "Platform.h"
 #include "DisplayHotplugManager.h"
-
-struct Msg
-{
-    int   what;
-    int   arg;
-    void* obj;
-
-    Msg() : what(0) { }
-    Msg(int _what) : what(_what) { }
-    Msg(int _what, int _arg) : what(_what), arg(_arg) { }
-    Msg(int _what, void* _obj) : what(_what), obj(_obj) { }
-    Msg(int _what, int _arg, void* _obj) : what(_what), arg(_arg), obj(_obj) { }
-};
+#include "OnDisplayRenderer.h"
 
 class IRenderable
 {
@@ -57,7 +45,7 @@ class IRenderObserver
 public:
     virtual ~IRenderObserver() { }
 
-    virtual void onRenderCompleted(GLuint texture) = 0;
+    virtual void onRenderCompleted(int dmafd, int format, int width, int height) = 0;
 };
 
 #define OFFSCREEN_WIDTH  1920
@@ -86,6 +74,7 @@ public:
     void addRenderObserver(IRenderObserver* observer);
     void removeRenderObserver(IRenderObserver* observer);
 
+    RenderMode_e getRenderMode() const;
     void setRenderMode(RenderMode_e eMode);
     void sortRenderer();
 
@@ -99,36 +88,32 @@ public:
 private:
     RenderService();
 
-    bool onPreStart();
-    void onPreStop();
-    void onPostStop();
-    void run();
+    bool onPreStart() override;
+    void onPreStop() override;
+    void onPostStop() override;
+    void run() override;
 
-    void onTimerExpired(const ITimer* timer);
+    void onTimerExpired(const ITimer* timer) override;
 
-    void onDisplayPlugged();
-    void onDisplayRemoved();
+    void onDisplayPlugged() override;
+    void onDisplayRemoved() override;
 
     bool initEGL();
     void deinitEGL();
 
 private:
-    IPlatform*   mPlatform;
+    OnDisplayRenderer* mOnDisplayRenderer = nullptr;
 
     EGLDisplay   mDisplay;
     EGLContext   mContext;
     EGLSurface   mSurface;
 
-    GLuint       mProgram;
-    GLuint       mAttribPos;
-    GLuint       mAttribTex;
-
     int          mRealScreenWidth;
     int          mRealScreenHeight;
 
-    Queue<Msg, 64> mMsgQ;
+    MsgQ         mMsgQ;
 
-    Mutex mRendererLock;
+    RecursiveMutex mRendererLock;
     typedef std::list<IRenderable*> RendererList;
     RendererList mRenderers;
 
@@ -138,8 +123,6 @@ private:
     bool         mExitTask = false;
     TimerTask    mTimer;
     RenderMode_e mRenderMode = RENDER_MODE_CONTINUOUSLY;
-
-    bool         mDisplayON = false;
 };
 
 inline EGLDisplay RenderService::getDisplay()
@@ -160,6 +143,11 @@ inline int RenderService::getScreenWidth() const
 inline int RenderService::getScreenHeight() const
 {
     return OFFSCREEN_HEIGHT;
+}
+
+inline RenderMode_e RenderService::getRenderMode() const
+{
+    return mRenderMode;
 }
 
 #endif /* __RENDER_SERVICE_H_ */

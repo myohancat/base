@@ -19,8 +19,10 @@ char* rtrim(char* s);
 
 #define trim(s)        rtrim(ltrim(s))
 
+uint16_t crc16(uint8_t* data, uint32_t size, uint16_t crc);
+
 /**
- * Ini Parser 
+ * Ini Parser
  * example :
  *      [section]
  *      name=value
@@ -29,7 +31,7 @@ typedef int (*fnIniCB)(void* param, const char* section, const char* name, const
 int parse_ini(FILE* file, fnIniCB cb, void* param);
 
 /**
- * Key-Value Parser 
+ * Key-Value Parser
  * example :
  *      key1 key2=value2 key3='value3' key4="value4"
  */

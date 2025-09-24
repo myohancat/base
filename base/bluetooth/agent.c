@@ -178,7 +178,7 @@ static DBusMessage *request_passkey(DBusConnection *conn,
 	dbus_message_get_args(msg, NULL, DBUS_TYPE_OBJECT_PATH, &device,
 							DBUS_TYPE_INVALID);
 
-    // TODO 
+    // TODO
 	//bt_shell_prompt_input("agent", "Enter passkey (number in 0-999999):", passkey_response, conn);
     UNUSED(passkey_response);
 

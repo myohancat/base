@@ -21,7 +21,7 @@
 
 #define IFCONFIG_WLAN0_UP    "ifconfig wlan0 up"
 #define WPA_SUPPLICANT       "wpa_supplicant"
-#define WPA_SUPPLICANT_START "wpa_supplicant -Dnl80211 -iwlan0 -c/etc/wpa_supplicant.conf -B"  
+#define WPA_SUPPLICANT_START "wpa_supplicant -Dnl80211 -iwlan0 -c/etc/wpa_supplicant.conf -B"
 #define CTRL_IFACE_DIR       "/var/run/wpa_supplicant"
 #define WIFI_INTF            "wlan0"
 #define WIFI_DRIVER          "8852ce"
@@ -159,7 +159,7 @@ void WifiManager::rmmod()
     ProcessUtil::system("rmmod " WIFI_DRIVER " > /dev/null 2>&1");
 }
 
-//fix func connect(dev, psk) 
+//fix func connect(dev, psk)
 bool WifiManager::connect(const WifiDevice& dev, const char* psk)
 {
     return connect(dev.getSsid(), psk, dev.getFlags());
@@ -179,7 +179,7 @@ bool WifiManager::connect(const char* ssid, const char* psk, const char* keymgmt
         goto ERROR;
     }
     if (!setSSID(ssid))
-    {   
+    {
         LOGE("setSSID error");
         goto ERROR;
     }
@@ -257,7 +257,7 @@ bool WifiManager::connect(const char* ssid, const char* psk, const char* keymgmt
     }
 
     if (!enableNetwork(0))
-    {   
+    {
         LOGE("enableNetwork error");
         goto ERROR;
     }
@@ -290,43 +290,43 @@ bool WifiManager::startApMode(const char* ssid, const char* psk)
     }
 
     if(!setSSID(ssid))
-    {   
+    {
         LOGE("setSSID error");
         goto ERROR;
     }
 
     if(!setKeyMgmt("WPA-PSK"))
-    {   
+    {
         LOGE("setKeyMgmt error");
         goto ERROR;
     }
 
     if(!setPsk(psk))
-    {   
+    {
         LOGE("setPsk error");
         goto ERROR;
     }
 
     if(!setFrequency(MANAGER_FREQ))
-    {   
+    {
         LOGE("setFrequency error");
         goto ERROR;
     }
 
     if(!setMode(2))
-    {   
+    {
         LOGE("setMode error");
         goto ERROR;
     }
 
      if(!setRequireHt40(1))
-    {   
+    {
         LOGE("setRequire_ht40 error");
         goto ERROR;
     }
 
     if(!enableNetwork(0))
-    {   
+    {
         LOGE("enableNetwork error");
         goto ERROR;
     }
@@ -480,7 +480,7 @@ __TRACE__
         {
             if(sPollFd.revents & (POLLRDHUP | POLLERR | POLLHUP | POLLNVAL))
                 break;
-            
+
             if (sPollFd.revents & POLLIN)
             {
                 read(sPollFd.fd, line, sizeof(line));
@@ -507,7 +507,7 @@ bool WifiManager::startSupplicant()
     }
     else
         LOGW("wpa_supplicant already executed");
-    
+
     return true;
 }
 
@@ -530,7 +530,7 @@ bool WifiManager::connectSupplicant()
 
         usleep(10 * 1000);
     }
-    
+
     if(ii == 1000)
     {
         LOGE("Failed to find ctrl_path : %s", ctrl_path);
@@ -878,7 +878,7 @@ bool WifiManager::enableNetwork(int networkNum)
 
     if(strncmp(buf, "OK", 2) != 0)
         return false;
-    
+
     return true;
 }
 

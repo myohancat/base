@@ -232,7 +232,7 @@ static char** make_args(const char* command)
     char** argv = NULL;
     int    argc = 0;
     char*  p = buf, *start = NULL, *end = NULL;
-    
+
     if (command == NULL)
         return NULL;
 
@@ -290,7 +290,7 @@ static void free_args(char** argv)
 
     for(ii = 0; argv[ii]; ii++)
         free(argv[ii]);
-    
+
     free(argv);
 }
 
@@ -325,7 +325,7 @@ FILE* popen2(const char *command, const char *type, int* child_pid)
         char** argv = make_args(command);
         if (strcmp(type, "r") == 0)
         {
-            close(fds[0]); 
+            close(fds[0]);
             dup2(fds[1], 1); /* STDOUT -> PIPE[1] */
         }
         else

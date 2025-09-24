@@ -112,6 +112,12 @@ static KeyMap_t KEYMAP_DEFAULT[] =
 
     { KEY_ZOOMIN/* 0x1a2 */,   KEY_CODE_ZOOM_IN   },
     { KEY_ZOOMOUT/* 0x1a3 */,  KEY_CODE_ZOOM_OUT   },
+
+    { BTN_LEFT/* 0x110 */,     KEY_CODE_MOUSE_LEFT  },
+    { BTN_RIGHT/* 0x111 */,    KEY_CODE_MOUSE_RIGHT },
+
+    { KEY_MEDIA/* 226 */,      KEY_CODE_MIC },
+    { KEY_INSERT/* 110 */,     KEY_CODE_MIC },
 };
 
 static KeyMap_t KEYMAP_FOOT_PEDAL[] =

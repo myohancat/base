@@ -1,7 +1,8 @@
 /**
- * Simple multimedia using gstreamer 
+ * Simple multimedia using gstreamer
  *
  * Author: Kyungyin.Kim < kyungyin.kim@medithinq.com >
+ * Author: Soyun.Park   < sypark@medithinq.com >
  * Copyright (c) 2024, MedithinQ. All rights reserved.
  */
 #include "FilePlayer.h"
@@ -32,24 +33,24 @@ bool FilePlayer::start(const std::string& filePath, bool isLoop)
     mFilePath = filePath;
     mIsLoop = isLoop;
 
-    return GstAppsinkRenderable::start();
+    return startRenderer();
 }
 
 void FilePlayer::stop()
 {
-    GstAppsinkRenderable::stop();
+    stopRenderer();
 }
 
 void FilePlayer::restart()
 {
-    GstAppsinkRenderable::stop();
-    GstAppsinkRenderable::start();
+    stopRenderer();
+    startRenderer();
 }
 
 GstElement* FilePlayer::createGstPipeline()
 {
     GError* err  = NULL;
-    
+
     std::ostringstream ss;
 
     if (mFilePath.length() == 0)
@@ -90,7 +91,7 @@ GstElement* FilePlayer::createGstPipeline()
 
     GstPipeline* pipeline = GST_PIPELINE(mPipeline);
     mAppSink = gst_bin_get_by_name(GST_BIN(pipeline), "sink");
-    
+
     return mPipeline;
 }
 

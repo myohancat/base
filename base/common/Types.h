@@ -15,12 +15,20 @@
 #define IS_SPACE(c)     ((c)==' ' || (c)=='\f' || (c)=='\n' || (c)=='\r' || (c)=='\t' || (c)=='\v')
 #define IS_QUOTE(ch)   (ch == '"' || ch == '\'')
 
+#ifndef ABS
+#define ABS(a) (((a) > 0) ? (a) : (-(a)))
+#endif
+
 #ifndef MIN
-#define MIN(x, y)   (x > y)?(y):(x)
+#define MIN(a,b)  ((a) > (b) ? (b) : (a))
 #endif
 
 #ifndef MAX
-#define MAX(x, y)   (x > y)?(x):(y)
+#define MAX(a,b)  ((a) < (b) ? (b) : (a))
+#endif
+
+#ifndef ALIGN
+#define ALIGN(x, a)  (((x) + ((a) - 1)) & ~((a) - 1))
 #endif
 
 #ifndef NELEM

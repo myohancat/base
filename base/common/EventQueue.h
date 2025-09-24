@@ -42,7 +42,7 @@ protected:
     bool onFdReadable(int fd);
 
 private:
-    Mutex mEosLock;
+    Mutex mTxLock;
     bool  mEOS;
     Pipe  mPipe;
 

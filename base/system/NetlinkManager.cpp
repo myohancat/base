@@ -103,7 +103,7 @@ bool NetlinkManager::onFdReadable(int fd)
     msg.msg_control = NULL;
     msg.msg_controllen = 0;
     msg.msg_flags = 0;
-    
+
 
     ret = recvmsg(fd, &msg, 0);
     if(ret < 0)

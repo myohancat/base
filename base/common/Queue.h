@@ -87,7 +87,7 @@ public:
             else if (timeoutMs == 0)
                 return false;
             else
-            { 
+            {
                 if (!mCvEmpty.wait(mLock, timeoutMs))
                     return false;
             }
@@ -131,10 +131,10 @@ public:
         mCvEmpty.signal();
     }
 
-    bool size();
-    bool isEOS();
-    bool isEmpty();
-    bool isFull();
+    size_t  size();
+    bool    isEOS();
+    bool    isEmpty();
+    bool    isFull();
 
 protected:
     void _put(T t);
@@ -159,7 +159,7 @@ protected:
 };
 
 template<typename T, int capacity>
-inline bool Queue<T, capacity>::size()
+inline size_t Queue<T, capacity>::size()
 {
     Lock lock(mLock);
 

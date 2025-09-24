@@ -8,6 +8,7 @@
 #define __PIPE_H_
 
 #include "Types.h"
+#include "Mutex.h"
 
 class Pipe
 {

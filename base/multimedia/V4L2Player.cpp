@@ -1,7 +1,8 @@
 /**
- * Simple multimedia using gstreamer 
+ * Simple multimedia using gstreamer
  *
  * Author: Kyungyin.Kim < kyungyin.kim@medithinq.com >
+ * Author: Soyun.Park   < sypark@medithinq.com >
  * Copyright (c) 2024, MedithinQ. All rights reserved.
  */
 #include "V4L2Player.h"
@@ -13,8 +14,9 @@
                                 gst_object_unref(x); \
                                 x = NULL; }
 
-V4L2Player::V4L2Player()
-          : mPipeline(NULL),
+V4L2Player::V4L2Player(const std::string& device)
+          : mDevice(device),
+            mPipeline(NULL),
             mAppSink(NULL)
 {
     GstHelper::initialize();
@@ -22,28 +24,42 @@ V4L2Player::V4L2Player()
 
 V4L2Player::~V4L2Player()
 {
-    stop();
+    stopRenderer();
 }
 
-bool V4L2Player::start(const std::string& device)
+bool V4L2Player::startViewer()
 {
-    mDevice = device;
-    return GstAppsinkRenderable::start();
+    return startRenderer();
 }
 
-void V4L2Player::stop()
+void V4L2Player::stopViewer()
 {
-    GstAppsinkRenderable::stop();
+    stopRenderer();
+}
+
+void V4L2Player::setView(int x, int y, int width, int height)
+{
+    return GstAppsinkRenderable::setView(x, y, width, height);
+}
+
+void V4L2Player::setAlpha(float alpha)
+{
+    return GstAppsinkRenderable::setAlpha(alpha);
+}
+
+void V4L2Player::setCrop(int x, int y, int width, int height)
+{
+    return GstAppsinkRenderable::setCrop(x, y, width, height);
 }
 
 GstElement* V4L2Player::createGstPipeline()
 {
     GError* err  = NULL;
-    
+
     std::ostringstream ss;
 
     if (mDevice.length() == 0)
-        return NULL; 
+        return NULL;
 
     ss << "v4l2src io-mode=4 device=" << mDevice << " do-timestamp=FALSE";
     //ss << " ! glupload name=upload ";

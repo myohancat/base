@@ -1,7 +1,8 @@
 /**
- * Simple multimedia using gstreamer 
+ * Simple multimedia using gstreamer
  *
  * Author: Kyungyin.Kim < kyungyin.kim@medithinq.com >
+ * Author: Soyun.Park   < sypark@medithinq.com >
  * Copyright (c) 2024, MedithinQ. All rights reserved.
  */
 #include "UdpStreamPlayer.h"
@@ -45,8 +46,8 @@ UdpStreamPlayer::~UdpStreamPlayer()
 bool UdpStreamPlayer::start(int port)
 {
     mPort = port;
-    
-    if (GstAppsinkRenderable::start())
+
+    if (startRenderer())
         return Task::start();
 
     return false;
@@ -55,13 +56,13 @@ bool UdpStreamPlayer::start(int port)
 void UdpStreamPlayer::stop()
 {
     Task::stop();
-    GstAppsinkRenderable::stop();
+    stopRenderer();
 }
 
 GstElement* UdpStreamPlayer::createGstPipeline()
 {
     GError* err  = NULL;
-    
+
     std::ostringstream ss;
 
     ss << "appsrc name=src stream-type=0 is-live=true format=3 do-timestamp=false blocksize=4096 max-bytes=0 ";

@@ -1,4 +1,4 @@
-BASE_DIR  ?= $(LOCAL_DIR)/base
+BASE_DIR  ?= ${LOCAL_DIR}/base
 
 DEFINES   += -DCONFIG_SOC_$(CHIP_NAME)
 DEFINES   += -D_GNU_SOURCE
@@ -20,14 +20,21 @@ SRCS      += ProcessUtil.cpp
 SRCS      += FileUtil.cpp
 SRCS      += Pipe.cpp
 SRCS      += Util.cpp
+SRCS      += MsgQ.cpp
 
 INCDIRS   += $(BASE_DIR)/net
 SRCDIRS   += $(BASE_DIR)/net
+SRCS      += HttpServer.cpp
 SRCS      += TcpServer.cpp
+
+INCDIRS   += $(BASE_DIR)/external/mongoose
+SRCDIRS   += $(BASE_DIR)/external/mongoose
+SRCS      += mongoose.c
 
 INCDIRS   += $(BASE_DIR)/input
 SRCDIRS   += $(BASE_DIR)/input
 SRCS      += InputManager.cpp
+SRCS      += PointerTracker.cpp
 SRCS      += HAL_Input.cpp
 
 INCDIRS   += $(BASE_DIR)/system
@@ -36,7 +43,6 @@ SRCS      += NetlinkManager.cpp
 SRCS      += UsbHotplugManager.cpp
 SRCS      += UsbStorageManager.cpp
 
-ifeq ($(WITH_HW),yes)
 INCDIRS   += $(BASE_DIR)/hw
 SRCDIRS   += $(BASE_DIR)/hw
 SRCS      += GPIO.cpp
@@ -46,6 +52,75 @@ SRCS      += UART.cpp
 SRCS      += BUTTON.cpp
 SRCS      += LED.cpp
 SRCS      += EEPROM.cpp
+
+ifeq ($(WITH_RENDERABLE),yes)
+ifeq ($(CONFIG_USE_DRM),yes)
+DEFINES   += -DUSE_DRM_PLATFORM
+CFLAGS    += $(shell $(PKG_CONFIG) --cflags libdrm)
+CXXFLAGS  += $(shell $(PKG_CONFIG) --cflags libdrm)
+LDFLAGS   += $(shell $(PKG_CONFIG) --libs libdrm)
+DEFINES   += -DGL_VERSION_1_5 -DEGL_EGLEXT_PROTOTYPES
+LDFLAGS   += -lEGL
+LDFLAGS   += -lGLESv2
+LDFLAGS   += -lmali
+SRCS      += DrmPlatform.cpp
+else
+DEFINES   += -DEGL_API_FB -DLINUX -DWL_EGL_PLATFORM
+LDFLAGS   += $(shell $(PKG_CONFIG) --libs wayland-client)
+LDFLAGS   += $(shell $(PKG_CONFIG) --libs wayland-egl)
+LDFLAGS   += $(shell $(PKG_CONFIG) --libs wayland-cursor)
+DEFINES   += -DEGL_EGLEXT_PROTOTYPES
+LDFLAGS   += -lEGL
+DEFINES   += -DGL_VERSION_1_5
+LDFLAGS   += -lGLESv2
+LDFLAGS   += -lmali
+DEFINES   += -DUSE_XDG_SHELL
+INCDIRS   += $(BASE_DIR)/render/xdg_proto
+SRCDIRS   += $(BASE_DIR)/render/xdg_proto
+SRCS      += xdg-shell-protocol.c
+SRCS      += WaylandPlatform.cpp
+endif
+
+INCDIRS   += $(BASE_DIR)/render
+SRCDIRS   += $(BASE_DIR)/render
+SRCS      += ShaderUtil.cpp
+SRCS      += EGLHelper.cpp
+SRCS      += FrameBuffer.cpp
+SRCS      += RenderService.cpp
+SRCS      += DisplayHotplugManager.cpp
+SRCS      += OnDisplayRenderer.cpp
+
+INCDIRS   += $(BASE_DIR)/render/renderer
+SRCDIRS   += $(BASE_DIR)/render/renderer
+SRCS      += EGLImageRenderer.cpp
+SRCS      += RawNV12Renderer.cpp
+SRCS      += RawRGBARenderer.cpp
+endif
+
+ifeq ($(WITH_UI), yes)
+INCDIRS   += $(BASE_DIR)/ui
+SRCDIRS   += $(BASE_DIR)/ui
+SRCS      += Point.cpp
+SRCS      += Size.cpp
+SRCS      += Rectangle.cpp
+SRCS      += Color.cpp
+SRCS      += Font.cpp
+SRCS      += Image.cpp
+SRCS      += Animation.cpp
+SRCS      += Canvas.cpp
+SRCS      += Window.cpp
+SRCS      += Page.cpp
+SRCS      += WindowRenderer.cpp
+LDFLAGS   += -lrga
+
+INCDIRS   += $(BASE_DIR)/ui/lib/skia
+INCDIRS   += $(BASE_DIR)/ui/lib/skia/include
+INCDIRS   += $(BASE_DIR)/ui/lib/skia/include/core
+INCDIRS   += $(BASE_DIR)/ui/lib/skia/include/gpu
+INCDIRS   += $(BASE_DIR)/ui/lib/skia/include/config
+CXXFLAGS  += -std=c++1z
+LIBDIRS   += $(BASE_DIR)/ui/lib/skia/lib/$(ARCH)
+LDFLAGS   += -lskia
 endif
 
 ifeq ($(WITH_CLI),yes)
@@ -87,60 +162,6 @@ SRCS      += watch.c
 LDFLAGS   += -ldbus-1 -lglib-2.0
 endif
 
-ifeq ($(WITH_RENDERABLE),yes)
-DEFINES   += -DEGL_API_FB -DLINUX -DWL_EGL_PLATFORM
-LDFLAGS   += $(shell $(PKG_CONFIG) --libs wayland-client)
-LDFLAGS   += $(shell $(PKG_CONFIG) --libs wayland-egl)
-LDFLAGS   += $(shell $(PKG_CONFIG) --libs wayland-cursor)
-DEFINES   += -DEGL_EGLEXT_PROTOTYPES
-LDFLAGS   += -lEGL
-DEFINES   += -DGL_VERSION_1_5
-LDFLAGS   += -lGLESv2
-
-DEFINES   += -DUSE_XDG_SHELL
-INCDIRS   += $(BASE_DIR)/render/xdg_proto
-SRCDIRS   += $(BASE_DIR)/render/xdg_proto
-SRCS      += xdg-shell-protocol.c
-
-INCDIRS   += $(BASE_DIR)/render
-SRCDIRS   += $(BASE_DIR)/render
-SRCS      += ShaderUtil.cpp
-SRCS      += RenderService.cpp
-SRCS      += WaylandPlatform.cpp
-SRCS      += DisplayHotplugManager.cpp
-
-INCDIRS   += $(BASE_DIR)/render/renderer
-SRCDIRS   += $(BASE_DIR)/render/renderer
-SRCS      += EGLImageRenderer.cpp
-SRCS      += RawNV12Renderer.cpp
-SRCS      += RawRGBARenderer.cpp
-endif
-
-ifeq ($(WITH_UI), yes)
-INCDIRS   += $(BASE_DIR)/ui
-SRCDIRS   += $(BASE_DIR)/ui
-SRCS      += Point.cpp
-SRCS      += Size.cpp
-SRCS      += Rectangle.cpp
-SRCS      += Color.cpp
-SRCS      += Font.cpp
-SRCS      += Image.cpp
-SRCS      += Animation.cpp
-SRCS      += Canvas.cpp
-SRCS      += Window.cpp
-SRCS      += Page.cpp
-SRCS      += WindowRenderer.cpp
-
-INCDIRS   += $(BASE_DIR)/ui/lib/skia
-INCDIRS   += $(BASE_DIR)/ui/lib/skia/include
-INCDIRS   += $(BASE_DIR)/ui/lib/skia/include/core
-INCDIRS   += $(BASE_DIR)/ui/lib/skia/include/gpu
-INCDIRS   += $(BASE_DIR)/ui/lib/skia/include/config
-CXXFLAGS  += -std=c++1z
-LIBDIRS   += $(BASE_DIR)/ui/lib/skia/lib/$(ARCH)
-LDFLAGS   += -lskia
-endif
-
 ifeq ($(WITH_MULTIMEDIA),yes)
 INCDIRS   += $(BASE_DIR)/multimedia
 SRCDIRS   += $(BASE_DIR)/multimedia
@@ -149,16 +170,8 @@ LDFLAGS   += $(shell $(PKG_CONFIG) --libs gstreamer-1.0 gstreamer-app-1.0 gstrea
 SRCS      += GstHelper.cpp
 SRCS      += GstAppsinkRenderable.cpp
 SRCS      += FilePlayer.cpp
+SRCS      += V4L2Player.cpp
 SRCS      += UdpStreamPlayer.cpp
-ifeq ($(CHIP), xavier)
-LDFLAGS   += -lnvbufsurface
-endif
-endif
-
-ifeq ($(WITH_WEBSERVER),yes)
-INCDIRS   += $(BASE_DIR)/external/mongoose
-SRCDIRS   += $(BASE_DIR)/external/mongoose
-SRCS      += mongoose.c
 endif
 
 ifeq ($(WITH_XML),yes)

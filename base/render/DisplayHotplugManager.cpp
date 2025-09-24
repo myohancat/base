@@ -137,7 +137,7 @@ bool DisplayHotplugManager::onFdReadable(int fd)
     if(devpath == NULL)
         return true;
 
-    LOGD("%s", devpath);
+    //LOGD("%s", devpath);
 
     *devpath = 0;
     devpath++;
@@ -172,7 +172,7 @@ bool DisplayHotplugManager::isPlugged(const char* devpath)
 {
     char path[1024];
     snprintf(path, sizeof(path), "/sys%s", devpath);
-    
+
     bool plugged = false;
 
     DIR* dir = opendir(path);

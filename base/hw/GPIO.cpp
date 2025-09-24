@@ -41,6 +41,21 @@ GPIO* GPIO::open(int num)
     return new GPIO(num);
 }
 
+GPIO* GPIO::open(int num, const std::string ioname)
+{
+    if (!_exist(ioname))
+    {
+        _export(ioname);
+        if (!_exist(ioname))
+        {
+            LOGE("Cannot open gpio node : ioname %s ", ioname.c_str());
+            return NULL;
+        }
+    }
+
+    return new GPIO(num, ioname);
+}
+
 GPIO::GPIO(int num) : mNum(num)
 {
     char path[MAX_PATH_LEN];
@@ -48,10 +63,17 @@ GPIO::GPIO(int num) : mNum(num)
     mPath = path;
 }
 
+GPIO::GPIO(int num, const std::string ioname) : mNum(num)
+{
+    char path[MAX_PATH_LEN];
+    snprintf(path, MAX_PATH_LEN, "%s/%s", SYS_FS_DIR, ioname.c_str());
+    mPath = path;
+}
+
 GPIO_Dir_e GPIO::getOutDir()
 {
     char buf[MAX_PATH_LEN];
-    if (!_exist(mNum)) {
+    if (!_exist(mPath)) {
         LOGE("GPIO node does not exist.");
         return GPIO_DIR_UNKNOWN;
     }
@@ -85,7 +107,7 @@ GPIO_Dir_e GPIO::getOutDir()
 
 void GPIO::setOutDir(GPIO_Dir_e eDIR)
 {
-    if (!_exist(mNum)) {
+    if (!_exist(mPath)) {
         LOGE("GPIO node does not exist.");
         return;
     }
@@ -108,7 +130,7 @@ void GPIO::setOutDir(GPIO_Dir_e eDIR)
 
 void GPIO::setValue(bool value)
 {
-    if (!_exist(mNum)) {
+    if (!_exist(mPath)) {
         LOGE("GPIO node does not exist.");
         return;
     }
@@ -128,7 +150,7 @@ void GPIO::setValue(bool value)
 
 bool GPIO::getValue()
 {
-    if (!_exist(mNum)) {
+    if (!_exist(mPath)) {
         LOGE("GPIO node does not exist.");
         return false;
     }
@@ -158,7 +180,7 @@ bool GPIO::getValue()
 
 GPIO_Edge_e GPIO::getEdge()
 {
-    if (!_exist(mNum)) {
+    if (!_exist(mPath)) {
         LOGE("GPIO node does not exist.");
         return GPIO_EDGE_UNKNOWN;
     }
@@ -194,7 +216,7 @@ GPIO_Edge_e GPIO::getEdge()
 
 void GPIO::setEdge(GPIO_Edge_e edge)
 {
-    if (!_exist(mNum)) {
+    if (!_exist(mPath)) {
         LOGE("GPIO node does not exist.");
         return;
     }
@@ -217,7 +239,7 @@ void GPIO::setEdge(GPIO_Edge_e edge)
 
 bool GPIO::isActiveLow()
 {
-    if (!_exist(mNum)) {
+    if (!_exist(mPath)) {
         LOGE("GPIO node does not exist.");
         return false;
     }
@@ -247,7 +269,7 @@ bool GPIO::isActiveLow()
 
 void GPIO::setActiveLow(bool activeLow)
 {
-    if (!_exist(mNum)) {
+    if (!_exist(mPath)) {
         LOGE("GPIO node does not exist.");
         return;
     }
@@ -286,10 +308,45 @@ bool GPIO::_export(int num)
     return true;
 }
 
+bool GPIO::_export(const std::string ioname)
+{
+    char buf[1024];
+    int n = 0;
+
+    int fd = 0;
+    fd = ::open(SYS_FS_DIR "/export", O_WRONLY);
+    if (fd < 0)
+    {
+        LOGE("Cannot open file : %s", SYS_FS_DIR "/export");
+        return false;
+    }
+
+    n = snprintf(buf, sizeof(buf), "%s", ioname.c_str());
+
+    ::write(fd, buf, n);
+    ::close(fd);
+
+    return true;
+}
+
 bool GPIO::_exist(int num)
 {
     char buf[MAX_PATH_LEN];
     snprintf(buf, MAX_PATH_LEN, SYS_FS_DIR "/gpio%d", num);
+    if (::access(buf, F_OK) == 0)
+        return true;
+
+    return false;
+}
+
+bool GPIO::_exist(const std::string ioname)
+{
+    char buf[MAX_PATH_LEN];
+	if (ioname.find(SYS_FS_DIR) == std::string::npos)
+        snprintf(buf, MAX_PATH_LEN, SYS_FS_DIR "/%s", ioname.c_str());
+    else
+        snprintf(buf, MAX_PATH_LEN, "%s", ioname.c_str());
+
     if (::access(buf, F_OK) == 0)
         return true;
 

@@ -61,20 +61,21 @@ UART* UART::open(const char* dev, int baudrate)
             SAFE_CLOSE(fd);
             return NULL;
     }
-/*
+#if 0
     tio.c_cflag |= (CRTSCTS | CS8 | CLOCAL | CREAD);
     tio.c_iflag = IGNPAR;
     tio.c_oflag = 0;
     tio.c_lflag = 0;//non-Canonical mode ... if you want Canonical mode, add ICANON;
-    */
-    tio.c_cflag &= ~CSIZE; 
-    tio.c_cflag |= CS8;  
-    tio.c_cflag &= ~CSTOPB; 
-    tio.c_cflag &= ~PARENB; 
-    tio.c_cflag |= (CLOCAL | CREAD); 
-    tio.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG); 
+#else
+    tio.c_cflag &= ~CSIZE;
+    tio.c_cflag |= CS8;
+    tio.c_cflag &= ~CSTOPB;
+    tio.c_cflag &= ~PARENB;
+    tio.c_cflag |= (CLOCAL | CREAD);
+    tio.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
+#endif
 
-    tio.c_oflag &= ~OPOST; 
+    tio.c_oflag &= ~OPOST;
     tio.c_cc[VMIN]= 0;  // non blocking...
     tio.c_cc[VTIME]=0;
     tcflush(fd, TCIFLUSH);
@@ -94,7 +95,7 @@ UART::~UART()
     mLock.lock();
     mListener = NULL;
     mLock.unlock();
-    
+
     stop();
 
     SAFE_CLOSE(mFD);

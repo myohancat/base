@@ -1,16 +1,21 @@
+
+/**
+ * My Base Code
+ * c wrapper class for developing embedded system.
+ *
+ * author: Kyungyin.Kim < myohancat@naver.com >
+ */
 #include "Pipe.h"
 
 #include "Log.h"
 
-#include <sys/types.h>
-#include <sys/socket.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
 #include <errno.h>
-
-#include "NetUtil.h"
 
 Pipe::Pipe()
 {
-    if (socketpair(AF_UNIX, SOCK_STREAM, 0, mFds) < 0)
+    if (pipe(mFds) < 0)
     {
         LOGE("Failed to open pipe. errno : %d", errno);
         mFds[0] = -1;
@@ -31,12 +36,12 @@ int Pipe::read(void* data, int len)
         LOGE("socket is not opened.");
         return -1;
     }
-    
+
     return ::read(mFds[0], data, len);
 }
 
 int Pipe::write(const void* data, int len)
-{ 
+{
     if (mFds[1] == -1)
     {
         LOGE("socket is not opened.");
@@ -48,10 +53,11 @@ int Pipe::write(const void* data, int len)
 
 void Pipe::flush()
 {
-    char buf[1024];
-    NetUtil::socket_set_blocking(mFds[0], false);
-    while(::read(mFds[0], buf, sizeof(buf)) > 0) { } // Flush Data
-    NetUtil::socket_set_blocking(mFds[0], true);
+    /* W/A Code for Flush */
+    uint8_t dummy[1024];
+    int value;
+    while(ioctl(mFds[0], FIONREAD, &value) == 0 && value > 0)
+        ::read(mFds[0], dummy, sizeof(dummy));
 }
 
 int Pipe::getFD()

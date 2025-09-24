@@ -1,3 +1,8 @@
+/**
+ * My simple ui framework source code
+ *
+ * Author: Kyungyin.Kim < myohancat@naver.com >
+ */
 #ifndef __ANIMATION_H_
 #define __ANIMATION_H_
 

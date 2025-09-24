@@ -1,8 +1,8 @@
 /**
- * My Base Code
- * c wrapper class for developing embedded system.
+ * MetaSCOPE Service
  *
- * author: Kyungyin.Kim < myohancat@naver.com >
+ * Author: Kyungyin.Kim < kyungyin.kim@medithinq.com >
+ * Copyright (c) 2022, MedithinQ. All rights reserved.
  */
 #include "HttpServer.h"
 
@@ -77,22 +77,23 @@ __TRACE__
     return true;
 }
 
-bool HttpServer::doPUT(struct mg_connection* conn, const char* clientIp, const struct mg_request_info* requestInfo)
+bool HttpServer::doPUT(struct mg_connection* conn, const char* clientIp, const char* uri, const char* body)
 {
 __TRACE__
-    UNUSED(clientIp);
     UNUSED(conn);
-    UNUSED(requestInfo);
+    UNUSED(clientIp);
+    UNUSED(uri);
+    UNUSED(body);
 
     return false;
 }
 
-bool HttpServer::doDELETE(struct mg_connection* conn, const char* clientIp, const struct mg_request_info* requestInfo)
+bool HttpServer::doDELETE(struct mg_connection* conn, const char* clientIp, const char* uri)
 {
 __TRACE__
-    UNUSED(clientIp);
     UNUSED(conn);
-    UNUSED(requestInfo);
+    UNUSED(clientIp);
+    UNUSED(uri);
 
     return false;
 }
@@ -158,14 +159,22 @@ void* HttpServer::requestHandler(enum mg_event event, struct mg_connection* conn
         }
         else if(strncmp(request_info->request_method, "PUT", 3) == 0)
         {
-            /* TODO */
-            if (pThis->doPUT(conn, clientIp, request_info))
+            char body[MAX_BODY_SIZE +2] = {0x00, };
+            int  bodySize = mg_read(conn, body, sizeof(body));
+
+            if (bodySize > MAX_BODY_SIZE)
+            {
+                mg_send_http_error(conn, 413, "413 Request Entity Too Large", "413 Request Entity Too Large");
+                return DONE;
+            }
+
+            if (pThis->doPUT(conn, clientIp, request_info->uri, body))
                 return DONE;
         }
         else if(strncmp(request_info->request_method, "DELETE", 4) == 0)
         {
             /* TODO */
-            if (pThis->doDELETE(conn, clientIp, request_info))
+            if (pThis->doDELETE(conn, clientIp, request_info->uri))
                 return DONE;
         }
         else

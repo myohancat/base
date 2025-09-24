@@ -8,9 +8,7 @@
 
 #include "Mutex.h"
 #include "Rectangle.h"
-#include <EGL/egl.h>
-#include <EGL/eglext.h>
-#include <GLES2/gl2.h>
+#include "EGLHelper.h"
 #include <errno.h>
 
 class Window;
@@ -24,7 +22,7 @@ public:
     virtual void setCrop(int x, int y, int width, int height);
     virtual void setMVP(float* mvp);
 
-    virtual void onDraw(void* pixels);
+    virtual void draw(void* pixels);
 
 protected:
     Mutex   mLock;
@@ -40,6 +38,8 @@ protected:
     GLuint  mUniformMVP;
     GLuint  mUniformTexture;
 
+    EGLImage  mEglImage = EGL_NO_IMAGE_KHR;
+    int       mDmaBuf   = -1;
     Rectangle mRectCrop;
 
     float   mMVP[16];

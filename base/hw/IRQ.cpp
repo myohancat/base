@@ -37,8 +37,39 @@ IRQ* IRQ::open(int num, GPIO_Edge_e egde, bool activeLow)
     return new IRQ(num, egde, activeLow);
 }
 
+IRQ* IRQ::open(int num, const std::string ioname, GPIO_Edge_e egde, bool activeLow)
+{
+    if (!_exist(ioname))
+    {
+        _export(ioname);
+        if (!_exist(ioname))
+        {
+            LOGE("Cannot open gpio node : ioname %s", ioname.c_str());
+            return NULL;
+        }
+    }
+
+    return new IRQ(num, ioname, egde, activeLow);
+}
+
 IRQ::IRQ(int num, GPIO_Edge_e egde, bool activeLow)
     : GPIO(num),
+      mEdge(egde),
+      mActiveLow(activeLow)
+{
+    char name[32];
+    sprintf(name, "IRQ%d", num);
+    mName = name;
+
+    setOutDir(GPIO_DIR_IN);
+    setEdge(GPIO_EDGE_NONE);
+    setActiveLow(activeLow);
+
+    start();
+}
+
+IRQ::IRQ(int num, std::string ioname, GPIO_Edge_e egde, bool activeLow)
+    : GPIO(num, ioname),
       mEdge(egde),
       mActiveLow(activeLow)
 {

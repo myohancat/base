@@ -53,13 +53,13 @@ public:
 
     void setInterval(uint32_t msec);
     void setRepeat(bool repeat);
-    
+
     uint32_t     getInterval() const;
     bool         getRepeat() const;
 
     uint64_t     getExpiry() const;
 
-    bool         execute(); 
+    bool         execute();
 
 private:
     ITimerHandler* mHandler;

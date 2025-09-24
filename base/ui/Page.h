@@ -25,8 +25,11 @@ public:
 
     virtual ~Page();
 
+    virtual bool onProcessKey(int keyCode, int state);
+
     virtual bool onKeyPressed(int keyCode);
     virtual bool onKeyReleased(int keyCode);
+    virtual bool onKeyRepeated(int keyCode);
 
 protected:
     virtual void onCreate();
@@ -38,6 +41,7 @@ protected:
     void onShow(Window* window);
     void onHide(Window* window);
 
+private:
     bool onKeyReceived(int keyCode, int state);
 
 private:

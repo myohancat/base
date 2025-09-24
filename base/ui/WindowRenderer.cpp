@@ -13,30 +13,30 @@
 
 #include "Log.h"
 
-static char VERTEX_SHADER_SRC[] =
-    "#version 300 es\n"
-    "layout(location = 0) in vec3 a_Position;\n"
-    "layout(location = 1) in vec2 a_TexCoords;\n"
-    "uniform mat4 u_MVPMatrix;\n"
-    "out vec2 v_TexCoords;\n"
-    "void main()\n"
-    "{\n"
-    "    gl_Position = u_MVPMatrix * vec4(a_Position.xyz, 1.0);\n"
-    "    v_TexCoords = a_TexCoords;\n"
-    "}";
+static char VERTEX_SHADER_SRC[] = R"(#version 300 es
+layout(location = 0) in vec3 a_Position;
+layout(location = 1) in vec2 a_TexCoords;
+uniform mat4 u_MVPMatrix;
+out vec2 v_TexCoords;
+void main()
+{
+    gl_Position = u_MVPMatrix * vec4(a_Position.xyz, 1.0);
+    v_TexCoords = a_TexCoords;
+}
+)";
 
-static char FRAGMENT_SHADER_SRC[] =
-    "#version 300 es\n"
-    "precision highp float;\n"
-    "in vec2 v_TexCoords;\n"
-    "uniform sampler2D u_Texture;\n"
-    "uniform float u_Alpha;\n"
-    "out vec4 fragColor;\n"
-    "void main()\n"
-    "{\n"
-    "    vec4 pixel = texture(u_Texture, v_TexCoords);\n"
-    "    fragColor = vec4(pixel.rgb, (pixel.a*u_Alpha));\n"
-    "}";
+static char FRAGMENT_SHADER_SRC[] = R"(#version 300 es
+precision highp float;
+in vec2 v_TexCoords;
+uniform sampler2D u_Texture;
+uniform float u_Alpha;
+out vec4 fragColor;
+void main()
+{
+    vec4 pixel = texture(u_Texture, v_TexCoords);
+    fragColor = vec4(pixel.rgb, (pixel.a*u_Alpha));
+}
+)";
 
 static float VERTICES[] =
 {
@@ -55,7 +55,7 @@ static float DEFAULT_MVP[] =
 };
 
 WindowRenderer::WindowRenderer(Window* window)
-           : mWindow(window)
+              : mWindow(window)
 {
     mProgram = ShaderUtil::createProgram(VERTEX_SHADER_SRC, FRAGMENT_SHADER_SRC);
 
@@ -68,6 +68,20 @@ WindowRenderer::WindowRenderer(Window* window)
     glGenTextures(1, &mTexture);
     glBindTexture(GL_TEXTURE_2D, mTexture);
 
+    if (window->getDmaBufFd() != -1)
+    {
+        mDmaBuf   = EGLHelper::create_dma_buf(DRM_FORMAT_ARGB8888, window->getWidth(), window->getHeight());
+        mEglImage = EGLHelper::create_egl_image(mDmaBuf, DRM_FORMAT_ARGB8888, window->getWidth(), window->getHeight());
+        glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, mEglImage);
+    }
+    else
+    {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_BLUE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, GL_GREEN);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_RED);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_ALPHA);
+    }
+
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -78,6 +92,13 @@ WindowRenderer::WindowRenderer(Window* window)
 
 WindowRenderer::~WindowRenderer()
 {
+    if (mEglImage != EGL_NO_IMAGE_KHR)
+    {
+        EGLHelper::destroy_egl_image(mEglImage);
+        mEglImage = EGL_NO_IMAGE_KHR;
+        SAFE_CLOSE(mDmaBuf);
+    }
+
     if(mTexture != (GLuint)-1)
         glDeleteTextures(1, &mTexture);
 
@@ -90,7 +111,11 @@ void WindowRenderer::setMVP(float* mvp)
         mMVP[ii] = mvp[ii];
 }
 
-void WindowRenderer::onDraw(void* pixels)
+#include "rga/im2d.h"
+#include "rga/RgaUtils.h"
+#include "rga/RgaApi.h"
+
+void WindowRenderer::draw(void* pixels)
 {
     Lock lock(mLock);
 
@@ -100,7 +125,6 @@ void WindowRenderer::onDraw(void* pixels)
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glDisable(GL_DEPTH_TEST);
-    //glClear(GL_COLOR_BUFFER_BIT);
 
     glUseProgram(mProgram);
 
@@ -112,9 +136,19 @@ void WindowRenderer::onDraw(void* pixels)
     glBindTexture(GL_TEXTURE_2D, mTexture);
 
     if (pixels)
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mWindow->getWidth(), mWindow->getHeight(), 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    {
+        if (mEglImage != EGL_NO_IMAGE_KHR)
+        {
+            EGLHelper::dma_buf_sync(mWindow->getDmaBufFd());
 
-    //glUniform1i(mUniformTexture, 0);
+            int aligned_w = ALIGN(mWindow->getWidth(), 16);
+            rga_buffer_t src = wrapbuffer_fd(mWindow->getDmaBufFd(), aligned_w, mWindow->getHeight(), RK_FORMAT_RGBA_8888);
+            rga_buffer_t dst = wrapbuffer_fd(mDmaBuf, aligned_w, mWindow->getHeight(), RK_FORMAT_RGBA_8888);
+            imcopy(src, dst);
+        }
+        else
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mWindow->getWidth(), mWindow->getHeight(), 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    }
     setCrop(0, 0, mWindow->getWidth(), mWindow->getHeight());
 
     glVertexAttribPointer(mAttribPos, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), VERTICES);
@@ -123,7 +157,7 @@ void WindowRenderer::onDraw(void* pixels)
     glEnableVertexAttribArray(mAttribPos);
     glEnableVertexAttribArray(mAttribTex);
 
-    glViewport(mWindow->getX(), mWindow->getY(), mWindow->getWidth(), mWindow->getHeight());
+    glViewport(mWindow->getX(), mWindow->getY(), mWindow->getWidth() * mWindow->getScaleWidth(), mWindow->getHeight() * mWindow->getScaleHeight());
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
     glDisableVertexAttribArray(mAttribPos);

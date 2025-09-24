@@ -32,7 +32,7 @@ static const KeyBind_t CONV_TABLE_ASCII[] =
     { VKEY_CODE_CARRIAGE_RETURN, "\r"   },
     { VKEY_CODE_RETURN,          "\n"   },
     { VKEY_CODE_TAB,             "\t"   },
-    { VKEY_CODE_NULL,            "\x00" }, 
+    { VKEY_CODE_NULL,            "\x00" },
     { VKEY_CODE_BEGIN_OF_LINE,   "\x01" },
     { VKEY_CODE_ARROW_LEFT,      "\x02" },
     { VKEY_CODE_CANCEL_TEXT,     "\x03" },

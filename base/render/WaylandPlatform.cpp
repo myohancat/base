@@ -12,6 +12,86 @@
 #include <GLES2/gl2.h>
 #include <algorithm>
 
+#include <sys/types.h>
+#include <dirent.h>
+static const char* get_wayland_display(const char* path)
+{
+    static char wayland_display[1024];
+    wayland_display[0] = 0;
+
+    DIR* dir = opendir(path);
+    struct dirent* de;
+
+    while((de = readdir(dir)))
+    {
+        if(de->d_name[0] == '.')
+        {
+            if(de->d_name[1] == '\0' || (de->d_name[1] == '.' && de->d_name[2] == '\0'))
+                continue;
+        }
+
+        if (strchr(de->d_name, '.')) // Skip .lock file
+            continue;
+
+        strcpy(wayland_display, de->d_name);
+    }
+    closedir(dir);
+
+    if (strlen(wayland_display) == 0)
+        return NULL;
+
+    return wayland_display;
+}
+
+static void set_weston_evironment()
+{
+    static const char* base_dirs[] =
+    {
+        "/run/user"
+    };
+
+    char path[1024];
+    path[0] = 0;
+    for (int ii = 0; ii < NELEM(base_dirs); ii++)
+    {
+        DIR* dir = opendir(base_dirs[ii]);
+        if (!dir)
+            continue;
+
+        struct dirent* de;
+        while((de = readdir(dir)))
+        {
+            if(de->d_name[0] == '.')
+            {
+                if(de->d_name[1] == '\0' || (de->d_name[1] == '.' && de->d_name[2] == '\0'))
+                    continue;
+            }
+            sprintf(path, "%s/%s", base_dirs[ii], de->d_name);
+            break;
+        }
+        closedir(dir);
+    }
+
+    if (path[0])
+    {
+        LOGI("XDG_RUNTIME_DIR=%s", path);
+        setenv("XDG_RUNTIME_DIR", path, 1);
+
+        /* W/A Code for wait for apear wayland display file */
+        for (int ii = 0; ii < 50; ii++)
+        {
+            const char* display = get_wayland_display(path);
+            if (display)
+            {
+                LOGI("WAYLAND_DISPLAY=%s", display);
+                setenv("WAYLAND_DISPLAY", display, 1);
+                break;
+            }
+            usleep(100*1000);
+        }
+    }
+}
+
 struct wl_registry_listener WaylandPlatform::registry_listener =
 {
     WaylandPlatform::global_registry_handler,
@@ -117,7 +197,7 @@ void WaylandPlatform::output_handle_mode(void* data, struct wl_output* wl_output
     //LOGD("output_handle_mode() flags : %d, width : %d, height : %d, refresh : %d", flags, width, height, refresh);
     if (flags & WL_OUTPUT_MODE_CURRENT)
     {
-        LOGD("Select Display Size : %dx%d", width, height);
+        CHECK("WaylandPlatform : Select Display Size : %dx%d", width, height);
         pThis->mScreenWidth = width;
         pThis->mScreenHeight =height;
     }
@@ -177,16 +257,20 @@ void  WaylandPlatform::handle_surface_configure(void* data, struct xdg_surface* 
     pThis->mWaitForConfigure = false;
 }
 
-struct xdg_surface_listener WaylandPlatform::xdg_surface_listener = 
+struct xdg_surface_listener WaylandPlatform::xdg_surface_listener =
 {
     handle_surface_configure
 };
 #endif
 
 WaylandPlatform::WaylandPlatform()
-               : Task("WaylandPlatform")
+               : Task("WaylandPlatform"),
+                 mScreenWidth(-1),
+                 mScreenHeight(-1)
 {
 __TRACE__
+    set_weston_evironment();
+
     mDisplay = wl_display_connect(NULL);
     if (mDisplay == NULL)
     {
@@ -235,6 +319,15 @@ __TRACE__
         wl_display_dispatch(mDisplay);
     }
 #endif
+
+    /* W/A code for resolution setting. */
+    for (int ii = 0; ii < 100; ii++)
+    {
+        if (mScreenWidth > 0 && mScreenHeight > 0)
+            break;
+
+        wl_display_dispatch(mDisplay);
+    }
 
     createWindow(mScreenWidth, mScreenHeight);
 

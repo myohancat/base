@@ -1,3 +1,8 @@
+/**
+ * My simple ui framework source code
+ *
+ * Author: Kyungyin.Kim < myohancat@naver.com >
+ */
 #include "Animation.h"
 
 #include "Window.h"

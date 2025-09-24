@@ -7,8 +7,44 @@
 #include "Task.h"
 
 #include <unistd.h>
-
+#include <sched.h>
 #include "Log.h"
+
+#include "MainLoop.h"
+
+class AsyncOnceTask : public Task
+{
+public:
+    ~AsyncOnceTask()
+    {
+        stop();
+    }
+
+    void execute(const std::function<void()> &func)
+    {
+        mFunc = func;
+        start();
+    }
+
+protected:
+    void run()
+    {
+        mFunc();
+
+        AsyncOnceTask* ptr = this;
+        MainLoop::getInstance().post([ptr] {
+            delete ptr;
+        });
+    }
+
+    std::function<void()> mFunc;
+};
+
+void Task::asyncOnce(const std::function<void()> &func)
+{
+    AsyncOnceTask* task = new AsyncOnceTask();
+    task->execute(func);
+}
 
 Task::Task()
      : mPriority(0),
@@ -18,24 +54,27 @@ Task::Task()
 {
 }
 
-Task::Task(int priority)
+Task::Task(int priority, int cpuid)
      : mPriority(priority),
+       mCpuId(cpuid),
        mName("Task"),
        mId(-1),
        mState(TASK_STATE_INIT)
 {
 }
 
-Task::Task(const std::string& name)
+Task::Task(const std::string& name, int cpuid)
      : mPriority(0),
+       mCpuId(cpuid),
        mName(name),
        mId(-1),
        mState(TASK_STATE_INIT)
 {
 }
 
-Task::Task(int priority, const std::string& name)
+Task::Task(int priority, const std::string& name, int cpuid)
      : mPriority(priority),
+       mCpuId(cpuid),
        mName(name),
        mId(-1),
        mState(TASK_STATE_INIT)
@@ -45,6 +84,21 @@ Task::Task(int priority, const std::string& name)
 Task::~Task()
 {
     // stop();
+}
+
+void Task::setCpuAffinity(int cpuid)
+{
+    Lock lock(mMutex);
+
+    if (mId != (pthread_t)-1)
+    {
+        cpu_set_t cpuset;
+        CPU_ZERO(&cpuset);
+        CPU_SET(cpuid, &cpuset);
+        pthread_setaffinity_np(mId, sizeof(cpu_set_t), &cpuset);
+    }
+
+    mCpuId = cpuid;
 }
 
 bool Task::start()
@@ -68,7 +122,7 @@ bool Task::start()
 
     if (!onPreStart())
     {
-        LOGE("onPreStart() failed !");
+        LOGE("[%s] onPreStart() failed !", mName.c_str());
         return false;
     }
 
@@ -78,7 +132,7 @@ bool Task::start()
     if (mPriority > 0)
     {
         pthread_attr_setinheritsched (&attr, PTHREAD_EXPLICIT_SCHED);
-        pthread_attr_setschedpolicy(&attr, SCHED_RR);
+        pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
         struct sched_param params;
         params.sched_priority = mPriority;
         pthread_attr_setschedparam(&attr, &params);
@@ -90,6 +144,15 @@ bool Task::start()
         pthread_attr_destroy(&attr);
         return false;
     }
+
+    if (mCpuId != -1)
+    {
+        cpu_set_t cpuset;
+        CPU_ZERO(&cpuset);
+        CPU_SET(mCpuId, &cpuset);
+        pthread_setaffinity_np(mId, sizeof(cpu_set_t), &cpuset);
+    }
+
     pthread_attr_destroy(&attr);
 
     // Setting Thread Name
@@ -131,7 +194,7 @@ void Task::stop()
     onPostStop();
 }
 
-void Task::sleep(int msec)
+void Task::msleep(int msec)
 {
     Lock lock(mMutex);
 

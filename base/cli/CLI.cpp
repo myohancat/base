@@ -507,7 +507,7 @@ void CLI::onTcpSessionEstablished(TcpSession* session)
 
     // Mode Setting
     NetUtil::send(session->getFD(), charactor_mode, sizeof(charactor_mode), SEND_TIMEOUT);
-    
+
     // Flush Response
     NetUtil::recv(session->getFD(), line, 1, RECV_TIMEOUT);
     if(line[0] == (char)-1) // TODO

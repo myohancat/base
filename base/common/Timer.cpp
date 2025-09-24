@@ -50,7 +50,7 @@ void Timer::restart()
     if(mRunning)
         stop();
 
-    start(mInterval, mRepeat);    
+    start(mInterval, mRepeat);
 }
 
 void Timer::stop()
@@ -77,7 +77,7 @@ bool Timer::execute()
 #endif
     if(mHandler != NULL)
         mHandler->onTimerExpired(this);
-    
+
     if(mRepeat)
         mExpiry = mExpiry + mInterval;
     else

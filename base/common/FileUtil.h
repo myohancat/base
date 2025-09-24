@@ -18,9 +18,13 @@ int filesize(const char* file, size_t* psize);
 typedef void (*CopyCB_fn)(void* param, const char* file, size_t copied);
 int copy(const char* src, const char* dst, CopyCB_fn fnCB, void* param);
 
+bool exist(const char* path);
+
 int mkdir(const char* path, mode_t mode=0644);
 
 void rm(const char* path);
+
+const char* get_symlink_abspath(const char* symlinkPath, char* realPath);
 
 } // namespace FileUtil
 

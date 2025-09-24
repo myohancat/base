@@ -9,10 +9,17 @@
 
 #include "I2C.h"
 
+#define DEF_EEPROM_I2C_NUM    (3)
+#define DEF_EEPROM_SLAVE_ADDR (0x50)
+#define DEF_EEPROM_SIZE       (64*1024)
+#define DEF_EEPROM_PAGE_SIZE  (128)
+
 class EEPROM
 {
 public:
-    EEPROM();
+    EEPROM(int i2cNum = DEF_EEPROM_I2C_NUM, uint8_t slaveAddr = DEF_EEPROM_SLAVE_ADDR,
+           int totalSize = DEF_EEPROM_SIZE, int pageSize = DEF_EEPROM_PAGE_SIZE);
+
     ~EEPROM();
 
     int getSize();
@@ -25,6 +32,10 @@ public:
 
 protected:
     std::shared_ptr<I2C> mI2C;
+
+    uint8_t mSlaveAddr;
+    int     mTotalSize;
+    int     mPageSize;
 };
 
 

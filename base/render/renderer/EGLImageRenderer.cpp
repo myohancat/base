@@ -8,38 +8,37 @@
 
 #include "ShaderUtil.h"
 #include <vector>
-#include <GLES2/gl2ext.h>
-
+#include "EGLHelper.h"
 #include "RenderService.h"
 #include "Log.h"
 
-static char VERTEX_SHADER_SRC[] =
-    "#version 300 es\n"
-    "layout(location = 0) in vec3 a_Position;\n"
-    "layout(location = 1) in vec2 a_TexCoords;\n"
-    "uniform mat4 u_MVPMatrix;\n"
-    "out vec2 v_TexCoords;\n"
-    "void main()\n"
-    "{\n"
-    "    gl_Position = u_MVPMatrix * vec4(a_Position.xyz, 1.0);\n"
-    "    v_TexCoords = a_TexCoords;\n"
-    "}";
+static char VERTEX_SHADER_SRC[] = R"(#version 300 es
+layout(location = 0) in vec3 a_Position;
+layout(location = 1) in vec2 a_TexCoords;
+uniform mat4 u_MVPMatrix;
+out vec2 v_TexCoords;
+void main()
+{
+    gl_Position = u_MVPMatrix * vec4(a_Position.xyz, 1.0);
+    v_TexCoords = a_TexCoords;
+}
+)";
 
-static char FRAGMENT_SHADER_SRC[] =
-    "#version 300 es\n"
-    "#extension GL_OES_EGL_image_external_essl3 : require\n"
-    "precision highp float;\n"
-    "in vec2 v_TexCoords;\n"
-    "uniform samplerExternalOES u_Texture;\n"
-    "uniform float u_Alpha;\n"
-    "uniform float u_ColorFactor;\n" // 0.0 = original, 1.0 = graysacle
-    "out vec4 fragColor;\n"
-    "void main()\n"
-    "{\n"
-    "    vec4 pixel = texture(u_Texture, v_TexCoords);\n"
-    "    float gray = 0.21 * pixel.r + 0.72 * pixel.g + 0.07 * pixel.b;\n"
-    "    fragColor  = vec4(pixel.rgb * (1.0-u_ColorFactor) + (gray*u_ColorFactor), u_Alpha);\n"
-    "}";
+static char FRAGMENT_SHADER_SRC[] = R"(#version 300 es
+#extension GL_OES_EGL_image_external_essl3 : require
+precision highp float;
+in vec2 v_TexCoords;
+uniform samplerExternalOES u_Texture;
+uniform float u_Alpha;
+uniform float u_ColorFactor; // 0.0 = original, 1.0 = graysacle
+out vec4 fragColor;
+void main()
+{
+    vec4 pixel = texture(u_Texture, v_TexCoords);
+    float gray = 0.21 * pixel.r + 0.72 * pixel.g + 0.07 * pixel.b;
+    fragColor  = vec4(pixel.rgb * (1.0-u_ColorFactor) + (gray*u_ColorFactor), u_Alpha);
+}
+)";
 
 static float VERTICES[] =
 {
@@ -65,10 +64,9 @@ static float DEFAULT_MVP[] =
     0.0f,  0.0f,  0.0f,  1.0f,
 };
 
-static PFNGLEGLIMAGETARGETTEXTURE2DOESPROC glEGLImageTargetTexture2DOES = NULL;
-
 EGLImageRenderer::EGLImageRenderer(float alpha, ColorMode_e eMode)
                  : mX(0), mY(0), mWidth(0), mHeight(0),
+                   mCropX(0), mCropY(0), mCropWidth(0), mCropHeight(0),
                    mAlpha(alpha),
                    mColorMode(eMode)
 {
@@ -92,9 +90,7 @@ EGLImageRenderer::EGLImageRenderer(float alpha, ColorMode_e eMode)
     glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     setMVP(DEFAULT_MVP);
-
-    if (!glEGLImageTargetTexture2DOES)
-        glEGLImageTargetTexture2DOES = (PFNGLEGLIMAGETARGETTEXTURE2DOESPROC)eglGetProcAddress("glEGLImageTargetTexture2DOES");
+    memcpy(mTexCoords, TEX_COORDS, sizeof(mTexCoords));
 }
 
 EGLImageRenderer::~EGLImageRenderer()
@@ -112,6 +108,39 @@ void EGLImageRenderer::setMVP(float* mvp)
         mMVP[ii] = mvp[ii];
 }
 
+void EGLImageRenderer::setCrop(int x, int y, int width, int height)
+{
+    mCropX = x;
+    mCropY = y;
+    mCropWidth = width;
+    mCropHeight = height;
+
+}
+
+void EGLImageRenderer::applyCrop(int imgWidth, int imgHeight)
+{
+    if (mCropWidth <= 0 || mCropHeight <= 0)
+        return;
+
+    float normalizedX1 = (float)mCropX / imgWidth;
+    float normalizedX2 = (float)(mCropX + mCropWidth) / imgWidth;
+    float normalizedY1 = (float)mCropY / (float)imgHeight;
+    float normalizedY2 = (float)(mCropY + mCropHeight) / imgHeight;
+
+    // 좌측 하단(0.0f, 0.0f)
+    mTexCoords[0] = normalizedX1;
+    mTexCoords[1] = normalizedY1;
+    // 우측 하단(1.0f, 0.0f)
+    mTexCoords[2] = normalizedX2;
+    mTexCoords[3] = normalizedY1;
+    // 좌측 상단(0.0f, 1.0f)
+    mTexCoords[4] = normalizedX1;
+    mTexCoords[5] = normalizedY2;
+    // 우측 상단(1.0f, 1.0f)
+    mTexCoords[6] = normalizedX2;
+    mTexCoords[7] = normalizedY2;
+}
+
 void EGLImageRenderer::setAlpha(float alpha)
 {
     mAlpha = alpha;
@@ -122,11 +151,19 @@ void EGLImageRenderer::setColorMode(ColorMode_e eMode)
     mColorMode = eMode;
 }
 
-void EGLImageRenderer::onDraw(EGLImageKHR image)
+void EGLImageRenderer::draw(ImageFrame* image)
 {
     Lock lock(mLock);
 
+    if (image && image->mMemType != MEM_TYPE_EGL)
+    {
+        LOGW("Invalid memory type. type : %d", image->mMemType);
+        return;
+    }
+
     glViewport(mX, mY, mWidth, mHeight);
+    if (image)
+        applyCrop(image->mWidth, image->mHeight);
 
     if (mAlpha < 1)
     {
@@ -138,7 +175,7 @@ void EGLImageRenderer::onDraw(EGLImageKHR image)
     glUseProgram(mProgram);
 
     glVertexAttribPointer(mAttribPos, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), VERTICES);
-    glVertexAttribPointer(mAttribTex, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), TEX_COORDS);
+    glVertexAttribPointer(mAttribTex, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), mTexCoords);
 
     glEnableVertexAttribArray(mAttribPos);
     glEnableVertexAttribArray(mAttribTex);
@@ -164,7 +201,7 @@ void EGLImageRenderer::onDraw(EGLImageKHR image)
 
     if (image != NULL)
     {
-        glEGLImageTargetTexture2DOES(GL_TEXTURE_EXTERNAL_OES, image);
+        glEGLImageTargetTexture2DOES(GL_TEXTURE_EXTERNAL_OES, image->mEglImg);
         ShaderUtil::checkGlError("glEGLImageTargetTexture2DOES");
     }
 

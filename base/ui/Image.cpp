@@ -59,7 +59,7 @@ Image::Image(uint8_t* ptr, int width, int height)
 {
     mBitmap = new SkBitmap();
 
-    SkImageInfo info = SkImageInfo::MakeN32Premul(width, height);
+    SkImageInfo info = SkImageInfo::MakeN32(width, height, kPremul_SkAlphaType);
     size_t rowBytes = info.minRowBytes();
     mBitmap->setInfo(info, rowBytes);
     mBitmap->setPixels(ptr);
@@ -126,28 +126,49 @@ void* Image::getPixels()
 
 bool Image::loadImage()
 {
-    SkFILEStream fileStream(mPath.c_str());
-    if (!fileStream.isValid())
+    sk_sp<SkData> data = SkData::MakeFromFileName(mPath.c_str());
+    if (!data)
     {
         LOGE("Cannot read imagefile : %s", mPath.c_str());
         return false;
     }
 
-    int   fileLen = fileStream.getLength();
-    char* buffer  = new char[fileLen];
-    fileStream.read(buffer, fileLen);
-    fileStream.close();
+    sk_sp<SkImage> encoded = SkImage::MakeFromEncoded(data);
+    if (!encoded)
+    {
+        LOGE("Decode fail : %s", mPath.c_str());
+        return false;
+    }
 
-    sk_sp<SkData> data   = SkData::MakeWithoutCopy(buffer, fileLen);
-    sk_sp<SkImage> image = SkImage::MakeFromEncoded(data);
+    if (mWidth  == -1) mWidth  = encoded->width();
+    if (mHeight == -1) mHeight = encoded->height();
 
-    mWidth = image->width();
-    mHeight = image->height();
-
+    SkImageInfo info = SkImageInfo::MakeN32(mWidth, mHeight, kPremul_SkAlphaType);
     mBitmap = new SkBitmap();
-    image->asLegacyBitmap(mBitmap, SkImage::kRO_LegacyBitmapMode);
+    if (!mBitmap->tryAllocPixels(info))
+    {
+        LOGE("alloc fail");
+        return false;
+    }
 
-    delete[] buffer;
+    if (mWidth == encoded->width() && mHeight == encoded->height())
+    {
+        if (!encoded->readPixels(mBitmap->pixmap(), 0, 0))
+        {
+            LOGE("readPixels fail");
+            return false;
+        }
+    }
+    else
+    {
+        SkBitmap tmp;
+        tmp.allocPixels(SkImageInfo::MakeN32(encoded->width(), encoded->height(), kPremul_SkAlphaType));
+        encoded->readPixels(tmp.pixmap(), 0, 0);
+
+        SkSamplingOptions samp(SkFilterMode::kNearest, SkMipmapMode::kNone);
+        tmp.pixmap().scalePixels(mBitmap->pixmap(), samp);
+    }
+    mBitmap->setImmutable();
 
     return true;
 }

@@ -1,8 +1,8 @@
 /**
- * My Base Code
- * c wrapper class for developing embedded system.
+ * MetaSCOPE Service
  *
- * author: Kyungyin.Kim < myohancat@naver.com >
+ * Author: Kyungyin.Kim < kyungyin.kim@medithinq.com >
+ * Copyright (c) 2022, MedithinQ. All rights reserved.
  */
 #ifndef __HTTP_SERVER_H_
 #define __HTTP_SERVER_H_
@@ -23,8 +23,8 @@ public:
 protected:
     virtual bool doGET(struct mg_connection* conn, const char* clientIp, const char* uri, const char* queryString);
     virtual bool doPOST(struct mg_connection* conn, const char* clientIp, const char* uri, const char* body);
-    virtual bool doPUT(struct mg_connection* conn, const char* clientIp, const struct mg_request_info* requestInfo);
-    virtual bool doDELETE(struct mg_connection* conn, const char* clientIp, const struct mg_request_info* requestInfo);
+    virtual bool doPUT(struct mg_connection* conn, const char* clientIp, const char* uri, const char* body);
+    virtual bool doDELETE(struct mg_connection* conn, const char* clientIp, const char* uri);
 
 private:
     static void* requestHandler(enum mg_event event, struct mg_connection* conn, const struct mg_request_info* request_info);

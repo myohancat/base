@@ -72,8 +72,12 @@ enum KeyCode_e
     KEY_CODE_CAMERA_MOVE_RIGHT = 205,
 
 	KEY_CODE_PAIRING = 206,
-	//KEY_CODE_DOWN = 207,
+
+    KEY_CODE_MOUSE_LEFT  = 272,
+    KEY_CODE_MOUSE_RIGHT = 273,
+
     // TODO ADD KEY_CODE HERE
+
 };
 
 #endif /* __KEY_CODE_ */

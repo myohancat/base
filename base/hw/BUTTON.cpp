@@ -20,6 +20,18 @@ BUTTON* BUTTON::open(const char* name, int gpioNum, bool activeLow)
     return new BUTTON(name, irq);
 }
 
+BUTTON* BUTTON::open(const char* name, int gpioNum, const std::string ioname, bool activeLow)
+{
+    IRQ* irq = IRQ::open(gpioNum, ioname, GPIO_EDGE_BOTH, activeLow);
+    if (!irq)
+    {
+        LOGE("Failed open %s.. irq ioname : %s (%d)", name, ioname.c_str(), gpioNum);
+        return NULL;
+    }
+
+    return new BUTTON(name, irq);
+}
+
 BUTTON::BUTTON(const char* name, IRQ* irq)
    : mName(name),
      mIRQ(irq)

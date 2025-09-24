@@ -1,5 +1,5 @@
 /**
- * Simple multimedia using gstreamer 
+ * Simple multimedia using gstreamer
  *
  * Author: Kyungyin.Kim < kyungyin.kim@medithinq.com >
  * Copyright (c) 2024, MedithinQ. All rights reserved.

@@ -138,9 +138,15 @@ void RawNV12Renderer::setColorMode(ColorMode_e eMode)
     mColorMode = eMode;
 }
 
-void RawNV12Renderer::onDraw(RawImageFrame* image)
+void RawNV12Renderer::draw(ImageFrame* image)
 {
     Lock lock(mLock);
+
+    if (image && image->mMemType != MEM_TYPE_SYS_MEM)
+    {
+        LOGW("Invalid memory type. type : %d", image->mMemType);
+        return;
+    }
 
     glViewport(mX, mY, mWidth, mHeight);
 

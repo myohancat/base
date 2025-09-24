@@ -64,7 +64,7 @@ void Page::onShow(Window* window)
     onShow();
 
     mLastKeyCode = -1;
-    InputManager::getInstance().addKeyListener(this);
+    InputManager::getInstance().addKeyListener(this, mZorder);
 }
 
 void Page::onHide(Window* window)
@@ -95,6 +95,16 @@ void Page::onDestroy()
 {
 }
 
+bool Page::onProcessKey(int keyCode, int state)
+{
+    (void)keyCode;
+    (void)state;
+
+    /* TODO Please override this */
+
+    return false;
+}
+
 bool Page::onKeyPressed(int keyCode)
 {
     (void)keyCode;
@@ -105,6 +115,15 @@ bool Page::onKeyPressed(int keyCode)
 }
 
 bool Page::onKeyReleased(int keyCode)
+{
+    (void)keyCode;
+
+    /* TODO Please override this */
+
+    return false;
+}
+
+bool Page::onKeyRepeated(int keyCode)
 {
     (void)keyCode;
 
@@ -131,14 +150,16 @@ bool Page::onKeyReceived(int keyCode, int state)
             return true;
     }
 
+    if (onProcessKey(keyCode, state))
+        return true;
+
     if(state == KEY_PRESSED)
         return onKeyPressed(keyCode);
     else if(state == KEY_RELEASED)
         return onKeyReleased(keyCode);
-#if 0
     else if(state == KEY_REPEATED)
-        onKeyRepeated(keyCode);
-#endif
+        return onKeyRepeated(keyCode);
+
     return false;
 }
 

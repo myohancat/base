@@ -28,7 +28,7 @@ void EventQueue::setHandler(IEventHandler* handler)
 
 void EventQueue::sendEvent(int id, void* data, int dataLen)
 {
-    //Lock lock(mEosLock);
+    Lock lock(mTxLock);
 
     if(mEOS)
         return;
@@ -57,8 +57,6 @@ void EventQueue::sendEvent(int id)
 
 int EventQueue::getFD()
 {
-    //Lock lock(mEosLock);
-
     if (mEOS)
         return -1;
 
@@ -67,13 +65,11 @@ int EventQueue::getFD()
 
 void EventQueue::setEOS(bool eos)
 {
-    //Lock lock(mEosLock);
     mEOS = eos;
 }
 
 void EventQueue::flush()
 {
-    //Lock lock(mEosLock);
     mPipe.flush();
 }
 
@@ -86,6 +82,7 @@ bool EventQueue::onFdReadable(UNUSED_PARAM int fd)
 
     mPipe.read(&id, sizeof(id));
     mPipe.read(&len, sizeof(len));
+
     if (len > 0)
         mPipe.read(data, len);
 

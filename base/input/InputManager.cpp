@@ -25,6 +25,8 @@
 
 #define DEVICE_PATH "/dev/input"
 
+#define EVENT_ID_KEY   0
+#define EVENT_ID_MOUSE 1
 static bool _is_input_device(const char* path)
 {
     struct stat st;
@@ -55,6 +57,7 @@ InputDevice::InputDevice(const std::string& path)
         LOGE("cannot open file ! %s - %s", path.c_str(), strerror(errno));
         return;
     }
+    ioctl(mFD, EVIOCGRAB, 1);
 
     loadAttrib();
     LOGI("InputDevice [%s] ver : %d, vendor : %d, product : %d", mName.c_str(), mVersion, mVendor, mProduct);
@@ -141,7 +144,7 @@ InputManager& InputManager::getInstance()
 }
 
 InputManager::InputManager()
-             : Task("InputManager"),
+             : Task(90, "InputManager"),
                mExitProc(false)
 {
     mFD = inotify_init();
@@ -173,7 +176,19 @@ InputManager::~InputManager()
 void InputManager::dispatchKeyEvent(int keycode, int state)
 {
     KeyEvent event(keycode, state);
-    mEventQ.sendEvent(0, &event, sizeof(event));
+    mEventQ.sendEvent(EVENT_ID_KEY, &event, sizeof(event));
+}
+
+void InputManager::dispatchMouseEvent(int dx, int dy)
+{
+#if 0
+    MouseEvent event(dx, dy);
+    mEventQ.sendEvent(EVENT_ID_MOUSE, &event, sizeof(event));
+#else
+    mMouseListeners.forEach([dx, dy](IMouseListener* listener) {
+        return listener->onMouseReceived(dx, dy);
+    });
+#endif
 }
 
 #ifdef ENABLE_VIRUTAL_REPEAT_KEY
@@ -193,87 +208,57 @@ void InputManager::onTimerExpired(const ITimer* timer)
 
 void InputManager::onEventReceived(int id, void* data, int dataLen)
 {
-    UNUSED(id);
-    UNUSED(dataLen);
+    if (!data || dataLen == 0)
+        return;
 
-    KeyEvent* event = (KeyEvent*)data;
-
-    LOGT("--- [KEY] code : %d, state : %s", event->mKeyCode, (event->mKeyState == KEY_RELEASED)?"RELEASED":(event->mKeyState == KEY_PRESSED)?"PRESSED":"REPEATED");
-
-    mKeyListenerLock.lock();
-    for(KeyListenerList::iterator it = mKeyListeners.begin(); it != mKeyListeners.end(); it++)
+    if (id == EVENT_ID_KEY)
     {
-        if((*it)->onKeyReceived(event->mKeyCode, event->mKeyState) == true)
-           break;
+        KeyEvent* event = (KeyEvent*)data;
+
+        //LOGT("--- [KEY] code : %d, state : %s", event->mKeyCode, (event->mKeyState == KEY_RELEASED)?"RELEASED":(event->mKeyState == KEY_PRESSED)?"PRESSED":"REPEATED");
+        mKeyListeners.forEach([event](IKeyListener* listener) {
+            return listener->onKeyReceived(event->mKeyCode, event->mKeyState);
+        });
     }
-    mKeyListenerLock.unlock();
+    else if (id == EVENT_ID_MOUSE)
+    {
+        MouseEvent* event = (MouseEvent*)data;
+
+        //LOGT("--- [MOUSE] dx : %d, dy : %d", event->mDX, event->mDY);
+        mMouseListeners.forEach([event](IMouseListener* listener) {
+            return listener->onMouseReceived(event->mDX, event->mDY);
+        });
+    }
 }
 
-void InputManager::addKeyListener(IKeyListener* listener)
+void InputManager::addKeyListener(IKeyListener* listener, int priority)
 {
-    Lock lock(mKeyListenerLock);
-
-    if(!listener)
-        return;
-
-    KeyListenerList::iterator it = std::find(mKeyListeners.begin(), mKeyListeners.end(), listener);
-    if(listener == *it)
-    {
-        LOGE("KeyListener is alreay exsit !!");
-        return;
-    }
-    mKeyListeners.push_front(listener);
+    mKeyListeners.addListener(listener, priority);
 }
 
 void InputManager::removeKeyListener(IKeyListener* listener)
 {
-    Lock lock(mKeyListenerLock);
-
-    if(!listener)
-        return;
-
-    for(KeyListenerList::iterator it = mKeyListeners.begin(); it != mKeyListeners.end(); it++)
-    {
-        if(listener == *it)
-        {
-            mKeyListeners.erase(it);
-            return;
-        }
-    }
+    mKeyListeners.removeListener(listener);
 }
 
-
-void InputManager::addTouchListener(ITouchListener* listener)
+void InputManager::addMouseListener(IMouseListener* listener, int priority)
 {
-    Lock lock(mKeyListenerLock);
+    mMouseListeners.addListener(listener, priority);
+}
 
-    if(!listener)
-        return;
+void InputManager::removeMouseListener(IMouseListener* listener)
+{
+    mMouseListeners.removeListener(listener);
+}
 
-    TouchListenerList::iterator it = std::find(mTouchListeners.begin(), mTouchListeners.end(), listener);
-    if(listener == *it)
-    {
-        LOGE("TouchListener is alreay exsit !!");
-        return;
-    }
-    mTouchListeners.push_front(listener);
+void InputManager::addTouchListener(ITouchListener* listener, int priority)
+{
+    mTouchListeners.addListener(listener, priority);
 }
 
 void InputManager::removeTouchListener(ITouchListener* listener)
 {
-    Lock lock(mKeyListenerLock);
-
-    if(!listener)
-        return;
-
-    for(TouchListenerList::iterator it = mTouchListeners.begin(); it != mTouchListeners.end(); it++)
-    {
-        if(listener == *it)
-        {
-            mTouchListeners.erase(it);
-            return;
-        }
-    }
+    mTouchListeners.removeListener(listener);
 }
 
 void InputManager::setRawKeyListener(IRawKeyListener* listener)
@@ -357,6 +342,8 @@ void InputManager::scanInputDevice()
 #define BUF_LEN     ( 1024 * (EVENT_SIZE + 16) )
 void InputManager::run()
 {
+    static int _dx, _dy = 0;
+
     fd_set sReadFds;
     struct timeval sWait;
     int    nLastFD = 0;
@@ -468,6 +455,24 @@ void InputManager::run()
                             dispatchKeyEvent(keycode, state);
                         }
                     }
+                    else if (event.type == EV_REL)
+                    {
+                        if (event.code == REL_X)
+                            _dx += event.value;
+                        else if (event.code == REL_Y)
+                            _dy += event.value;
+                    }
+                    else if (event.type == EV_SYN)
+                    {
+                        if (event.code == SYN_REPORT)
+                        {
+                            if (_dx || _dy)
+                            {
+                                dispatchMouseEvent(_dx, _dy);
+                                _dx = _dy = 0;
+                            }
+                        }
+                    }
                     else if (event.type == EV_ABS)
                     {
                         if (event.code == ABS_MT_TRACKING_ID) // 57
@@ -489,11 +494,11 @@ void InputManager::run()
                         }
                         else if (event.code == ABS_MT_POSITION_X) // 53
                         {
-                            // 
+                            //
                         }
                         else if (event.code == ABS_MT_POSITION_Y) // 54
                         {
-                            // 
+                            //
                         }
                         else if (event.code == ABS_X) // 0
                         {

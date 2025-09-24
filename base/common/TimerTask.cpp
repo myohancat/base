@@ -78,7 +78,7 @@ void TimerTask::run()
         uint64_t expireTime = mStartTime + mIntervalMs;
         uint64_t timeoutMs  = expireTime - SysTime::getTickCountMs();
 
-        sleep(timeoutMs);
+        msleep(timeoutMs);
 
         if (state() == TASK_STATE_STOPPING)
             continue;

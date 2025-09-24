@@ -37,6 +37,8 @@ public:
 
     virtual void setWindow(Window* window) = 0;
 
+    virtual void setBackground(const Color& color) = 0;
+
     virtual void setPos(int x, int y) = 0;
     virtual void setSize(int width, int height) = 0;
     virtual void setRectangle(int x, int y, int width, int height) = 0;
@@ -76,7 +78,7 @@ public:
         UNUSED(state);
         UNUSED(posX);
         UNUSED(posY);
-   
+
         return false;
     }
 };

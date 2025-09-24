@@ -55,7 +55,7 @@ public:
     void doMoveLeft();
     void doMoveRight();
     void doClearLine();
-    
+
     void reset();
 
     void setCR(bool value);

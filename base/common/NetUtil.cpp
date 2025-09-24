@@ -6,6 +6,7 @@
  */
 #include "NetUtil.h"
 
+#include <stdlib.h>
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -226,7 +227,7 @@ int accept(int sock, char* clntaddr, int addrlen)
 {
     struct sockaddr_in addr;
     int addrLen = sizeof(addr);
-    
+
     int clntSock = accept(sock, (struct sockaddr*) &addr, (socklen_t *) &addrLen);
     if (clntSock < 0)
     {
@@ -264,7 +265,7 @@ int send(int sock, const void *buf, size_t len, int timeoutMs, int fd_int)
     }
     else
         ret = -1; // Failed to Poll
-    
+
     return ret;
 }
 
@@ -292,7 +293,7 @@ int recv(int sock, void *buf, size_t len, int timeoutMs, int fd_int)
     }
     else
         ret = -1; // Failed to Poll
-    
+
     return ret;
 }
 
@@ -329,7 +330,7 @@ int sendto(int sock, const char* ipaddr, int port, void *buf, size_t len, int ti
     }
     else
         ret = -1; // Failed to Poll
-    
+
     return ret;
 }
 
@@ -366,7 +367,7 @@ int recvfrom(int sock, char* ipaddr, int iplen, void *buf, size_t len, int timeo
     }
     else
         ret = -1; // Failed to Poll
-    
+
     return ret;
 }
 
@@ -420,7 +421,7 @@ int socket_set_recv_buf_size(int sock, int bufSize)
 
     if (socket_get_recv_buf_size(sock) > bufSize)
         return 0;
-        
+
 SET_FORCE:
     if (setsockopt(sock, SOL_SOCKET, SO_RCVBUFFORCE, (char*)&bufSize, sizeof(bufSize)) != 0)
     {
@@ -455,7 +456,7 @@ int socket_set_send_buf_size(int sock, int bufSize)
 
     if (socket_get_send_buf_size(sock) > bufSize)
         return 0;
-        
+
 SET_FORCE:
     if (setsockopt(sock, SOL_SOCKET, SO_SNDBUFFORCE, (char*)&bufSize, sizeof(bufSize)) != 0)
     {
@@ -505,6 +506,30 @@ int get_link_state(const char* ifname, bool* isUP)
     return 0;
 }
 
+int get_cable_state(const char* ifname, bool* isPlugged)
+{
+    FILE* file = NULL;
+    char  path[1024];
+    char  data[1024];
+
+    sprintf(path, "/sys/class/net/%s/carrier", ifname);
+    file = fopen(path, "r");
+    if(!file)
+        return -1;
+
+    memset(data, 0x00, sizeof(data));
+    if(fgets(data, sizeof(data), file) == NULL)
+    {
+        fclose(file);
+        return -2;
+    }
+
+    *isPlugged = (atoi(trim(data)) == 1);
+    fclose(file);
+
+    return 0;
+}
+
 int get_mac_addr(const char* ifname, MacAddr_t* mac)
 {
     int sock;
@@ -528,7 +553,7 @@ int get_mac_addr(const char* ifname, MacAddr_t* mac)
     }
 
     memcpy(mac->raw, req.ifr_hwaddr.sa_data, 6);
-    sprintf(mac->str, "%02X:%02X:%02X:%02X:%02X:%02X", 
+    sprintf(mac->str, "%02X:%02X:%02X:%02X:%02X:%02X",
                     mac->raw[0], mac->raw[1], mac->raw[2], mac->raw[3], mac->raw[4], mac->raw[5]);
 
     close(sock);

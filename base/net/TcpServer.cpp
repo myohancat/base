@@ -69,8 +69,6 @@ void TcpSession::run()
     if (mServer)
         mServer->notifyTcpSessionRemoved(this);
     mLock.unlock();
-
-    mPipe.flush();
 }
 
 const std::string& TcpSession::getAddress()

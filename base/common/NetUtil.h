@@ -44,6 +44,7 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout);
 #define POLL_TIMEOUT     (0)
 
 #define POLL_REQ_IN      (POLLIN)
+#define POLL_REQ_PRI     (POLLPRI | POLLIN)
 #define POLL_REQ_OUT     (POLLOUT)
 int fd_poll(int fd, int req, int timeout, int fd_int = -1);
 
@@ -60,7 +61,7 @@ int listen(int sock, int backlog);
 int accept(int sock, char* clntaddr, int addrlen);
 
 /**
- * return > 0, success. 
+ * return > 0, success.
  * return < 0, error occured.
  * especially, timeout error is -ETIMEDOUT
  * return == 0, interrupted.
@@ -86,6 +87,7 @@ int socket_get_send_buf_size(int sock);
 
 /* network information */
 int get_link_state(const char* ifname, bool* isUP);
+int get_cable_state(const char* ifname, bool* isPugged);
 int get_mac_addr(const char* ifname, MacAddr_t* mac);
 int get_ip_addr(const char* ifname, char* ip);
 int get_netmask(const char* ifname, char* netmask);

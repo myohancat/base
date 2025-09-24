@@ -8,11 +8,12 @@
 #include "Log.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <dirent.h>
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
-
+#include <limits.h>
 #include <sys/stat.h>
 
 namespace FileUtil
@@ -62,7 +63,7 @@ int filesize(const char* file, size_t* psize)
 
             size += sub_size;
         }
-        
+
         if (ret == 0)
             *psize = size;
 
@@ -129,7 +130,7 @@ int copy(const char* src, const char* dst, CopyCB_fn fnCB, void* param)
     }
     else
     {
-        char  buffer[1024];
+        char  buffer[4*1024];
         FILE* fpSrc = NULL;
         FILE* fpDst = NULL;
         size_t readSize, writeSize;
@@ -169,6 +170,14 @@ int copy(const char* src, const char* dst, CopyCB_fn fnCB, void* param)
     }
 
     return 0;
+}
+
+bool exist(const char* path)
+{
+    if(access(path, F_OK) == 0)
+        return true;
+
+    return false;
 }
 
 int mkdir(const char* path, mode_t mode)
@@ -242,6 +251,58 @@ void rm(const char* path)
     {
         unlink(path);
     }
+}
+
+const char* get_symlink_abspath(const char* symlinkPath, char* realPath)
+{
+    char linkTarget[2048];
+    ssize_t len = readlink(symlinkPath, linkTarget, sizeof(linkTarget) - 1);
+    if (len == -1)
+    {
+        LOGE("readlink failed. (%s)", linkTarget);
+        return NULL;
+    }
+    linkTarget[len] = '\0';
+
+    char absPath[PATH_MAX];
+    if (linkTarget[0] == '/')
+    {
+        if (realpath(linkTarget, absPath) == NULL)
+        {
+            LOGE("realpath(%s, %s) failed", linkTarget, absPath);
+            return NULL;
+        }
+    }
+    else
+    {
+        char linkDir[2048];
+        strncpy(linkDir, symlinkPath, sizeof(linkDir));
+        linkDir[sizeof(linkDir) - 1] = '\0';
+
+        char *slash = strrchr(linkDir, '/');
+        if (slash != NULL)
+        {
+            *slash = '\0';
+            char combined[PATH_MAX];
+            snprintf(combined, sizeof(combined), "%s/%s", linkDir, linkTarget);
+            if (realpath(combined, absPath) == NULL)
+            {
+                LOGE("realpath(%s, %s) failed", combined, absPath);
+                return NULL;
+            }
+        }
+        else
+        {
+            if (realpath(linkTarget, absPath) == NULL)
+            {
+                LOGE("realpath(%s, %s) failed", linkTarget, absPath);
+                return NULL;
+            }
+        }
+    }
+
+    strcpy(realPath, absPath);
+    return realPath;
 }
 
 } // namespace FileUtil
