@@ -33,7 +33,11 @@
 
 #ifndef NELEM
 #define NELEM(arr) ((int)(sizeof(arr) / sizeof((arr)[0])))
-#endif /* NELEM */
+#endif
+
+#ifndef ZERO
+#define ZERO(x)   memset(&(x), 0, sizeof(x))
+#endif
 
 #ifndef NULL
 #define NULL      (0)

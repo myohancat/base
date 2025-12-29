@@ -154,7 +154,8 @@ static void page_flip_handler(int fd, unsigned int frame, unsigned int sec, unsi
 }
 
 DrmPlatform::DrmPlatform(const char* device)
-           : Task("DrmPlatform")
+           : Task(80, "DrmPlatform"),
+             mMsgQ(1)
 {
 __TRACE__
     if (initDRM(device))
@@ -363,8 +364,8 @@ void DrmPlatform::flip()
 #ifdef FLIP_CALL_DIRECTLY
     doFlip();
 #else
+    mMsgQ.remove(0);
     mMsgQ.put(Msg(0));
-    mWait.wait(mLock, 30);
 #endif
 }
 

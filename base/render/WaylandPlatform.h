@@ -8,6 +8,7 @@
 
 #include "Platform.h"
 #include "Task.h"
+#include "Pipe.h"
 
 #include <memory>
 
@@ -39,6 +40,8 @@ private:
     void run();
 
 private:
+    bool mExitTask = false;
+    Pipe mPipe;
     struct wl_display*       mDisplay = NULL;
     struct wl_compositor*    mCompositor = NULL;
     struct wl_surface*       mSurface = NULL;

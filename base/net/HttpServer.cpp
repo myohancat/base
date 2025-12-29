@@ -1,8 +1,7 @@
 /**
- * MetaSCOPE Service
+ * Simple Http Server
  *
- * Author: Kyungyin.Kim < kyungyin.kim@medithinq.com >
- * Copyright (c) 2022, MedithinQ. All rights reserved.
+ * author: Kyungyin.Kim < myohancat@naver.com >
  */
 #include "HttpServer.h"
 

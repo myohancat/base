@@ -94,10 +94,10 @@ WifiDevice::WifiDevice(const char* str)
             case WIFI_DEVICE_FLAGS:
             {
                 //mFlags = tok;
-				if(strstr(tok, "PSK") != NULL)
-					mFlags = "PSK";
-				else
-					mFlags = "SAE";
+                if(strstr(tok, "PSK") != NULL)
+                    mFlags = "PSK";
+                else
+                    mFlags = "SAE";
                 break;
             }
             case WIFI_DEVICE_SSID:
@@ -167,7 +167,7 @@ bool WifiManager::connect(const WifiDevice& dev, const char* psk)
 
 bool WifiManager::connect(const char* ssid, const char* psk, const char* keymgmt, const char* proto, const char* pairwise, const char* group)
 {
-	if (!addNetwork())
+    if (!addNetwork())
     {
         LOGE("addNetwork error");
         goto ERROR;
@@ -359,9 +359,9 @@ bool WifiManager::sendWpaCtrlCommand(const char* cmd, char* buf, size_t len)
     if (mCtrlConn == NULL)
         return false;
 
-    LOGT("WPA_CTRL : send command : %s", cmd);
+    LOGD("WPA_CTRL : send command : %s", cmd);
     ret = wpa_ctrl_request(mCtrlConn, cmd, strlen(cmd), buf, &len, NULL);
-    LOGT("WPA_CTRL : ret : %d", ret);
+    LOGD("WPA_CTRL : ret : %d", ret);
     if (ret == -2)
     {
         LOGE("'%s' command timed out.", cmd);
@@ -374,7 +374,6 @@ bool WifiManager::sendWpaCtrlCommand(const char* cmd, char* buf, size_t len)
     }
 
     buf[len -1] = '\0';
-    LOGT("WPA_CTRL%s", buf);
 
     return true;
 }
@@ -387,7 +386,7 @@ void WifiManager::addListener(IWifiListener* listener)
         return;
 
     WifiListenerList::iterator it = std::find(mWifiListeners.begin(), mWifiListeners.end(), listener);
-    if(listener == *it)
+    if(it != mWifiListeners.end())
         return;
 
     mWifiListeners.push_back(listener);
@@ -436,13 +435,12 @@ void WifiManager::processEvent(const char* str)
     }
     else if (strncmp(str, "CTRL-EVENT-DISCONNECTED", 23) == 0)
     {
-		const char* reason;
-		reason = getReason(str);
+        const char* reason;
+        reason = getReason(str);
 
-		Lock lock(mMutex);
+        Lock lock(mMutex);
         for(WifiListenerList::iterator it = mWifiListeners.begin(); it != mWifiListeners.end(); it++)
         {
-            LOGD("onWifiDisconnected call~!!");
             (*it)->onWifiDisconnected(reason);
         }
     }
@@ -488,9 +486,9 @@ __TRACE__
                 if(line[0] == '<')
                     p = strchr(p + 1, '>') + 1;
 
-                LOGD("%s", p);
+                //LOGD("%s", p);
                 processEvent(p);
-				memset(line, '\0', sizeof(line));
+                memset(line, '\0', sizeof(line));
             }
         }
     }
@@ -499,8 +497,6 @@ __TRACE__
 bool WifiManager::startSupplicant()
 {
     int pid = ProcessUtil::get_pid_from_proc_by_name(WPA_SUPPLICANT);
-
-    LOGD("pid : %d", pid);
     if(pid < 0)
     {
         ProcessUtil::system(WPA_SUPPLICANT_START);
@@ -654,21 +650,21 @@ bool WifiManager::wifiDevInfo(const char* ssid, WifiDevice& dev)
 
 const char* WifiManager::getReason(const char* str)
 {
-	//TODO
-	UNUSED(str);
-	char disconnStr[1024];
-	strcpy(disconnStr, str);
+    //TODO
+    UNUSED(str);
+    char disconnStr[1024];
+    strcpy(disconnStr, str);
 
-	char* reason = strstr(disconnStr, "reason=");
-	if(reason != NULL)
-	{
-		reason = strtok(reason, "=");
-		reason = strtok(NULL, " ");
+    char* reason = strstr(disconnStr, "reason=");
+    if(reason != NULL)
+    {
+        reason = strtok(reason, "=");
+        reason = strtok(NULL, " ");
 
-		return reason;
-	}
-	else
-		return NULL;
+        return reason;
+    }
+    else
+        return NULL;
 }
 
 int  WifiManager::listNetwork()
@@ -691,9 +687,14 @@ int  WifiManager::listNetwork()
 bool WifiManager::addNetwork()
 {
     char buf[255];
+    int listNum = -1;
 
-    if (listNetwork() > 0)
-        removeNetwork(0);
+    listNum = listNetwork();
+    if (listNum > 0)
+    {
+        for (int i = 0; i<=listNum; i++)
+            removeNetwork(i);
+    }
 
     if(sendWpaCtrlCommand("ADD_NETWORK", buf, sizeof(buf)))
     {
@@ -891,13 +892,25 @@ __TRACE__
     sendWpaCtrlCommand(cmd);
 }
 
-void WifiManager::removeNetwork(int networkNum)
+bool WifiManager::removeNetwork(int networkNum)
 {
 __TRACE__
     char cmd[1024];
+    char buf[1024];
+
+    if (listNetwork() < 0)
+    {
+        LOGW("There is nothing in the network list.");
+        return true;
+    }
 
     sprintf(cmd, "REMOVE_NETWORK %d", networkNum);
-    sendWpaCtrlCommand(cmd);
+    sendWpaCtrlCommand(cmd, buf, sizeof(buf));
+
+    if (strncmp(buf, "OK", 2) != 0)
+        return false;
+
+    return true;
 }
 
 bool WifiManager::setCountry(const char* country)

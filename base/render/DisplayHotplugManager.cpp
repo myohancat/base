@@ -28,19 +28,7 @@
 
 static const char* gDevicePaths[] =
 {
-#if defined(CONFIG_SOC_RK3588)
-    "/devices/platform/fde50000.dp/extcon",
-    "/devices/platform/fde80000.hdmi/extcon",
-#elif defined(CONFIG_SOC_IMX8MQ)
-    // TODO
-#elif defined(CONFIG_SOC_XAVIER)
-    // TODO
-#elif defined(CONFIG_SOC_RPI5)
-    "/devices/platform/axi/axi:gpu/drm/card0",
-    "/devices/platform/axi/axi:gpu/drm/card1",
-#else
-#error === UNSUPPORTED CHIPSET ===
-#endif
+    "/devices/platform/display-subsystem/drm/card0"
 };
 
 DisplayHotplugManager& DisplayHotplugManager::getInstance()
@@ -63,7 +51,8 @@ DisplayHotplugManager::DisplayHotplugManager()
 
     memset(&addr, 0x00, sizeof(addr));
     addr.nl_family = AF_NETLINK;
-    addr.nl_groups = RTMGRP_LINK;
+    addr.nl_pid    = getpid();
+    addr.nl_groups = 1;
 
     if(bind(mSock, (struct sockaddr*)&addr, sizeof(addr)) < 0)
     {
@@ -78,8 +67,7 @@ DisplayHotplugManager::~DisplayHotplugManager()
 {
     MainLoop::getInstance().removeFdWatcher(this);
 
-    if(mSock >= 0)
-        close(mSock);
+     SAFE_CLOSE(mSock);
 }
 
 int DisplayHotplugManager::getFD()
@@ -188,10 +176,8 @@ bool DisplayHotplugManager::isPlugged(const char* devpath)
                     continue;
         }
 
-#if defined(CONFIG_SOC_RPI5)
         if (strncmp(de->d_name, "card0-HDMI-A", 12) != 0 && strncmp(de->d_name, "card1-HDMI-A", 12) != 0)
             continue;
-#endif
 
         plugged |= isPlugged(path, de->d_name);
         if (plugged)
@@ -207,37 +193,23 @@ bool DisplayHotplugManager::isPlugged(const char* syspath, const char* subpath)
 {
     char path[2048];
     char line[1024];
-#if defined(CONFIG_SOC_RK3588)
-    sprintf(path, "%s/%s/state", syspath, subpath);
-#else
     sprintf(path, "%s/%s/status", syspath, subpath);
-#endif
 
+    bool connected = true;
     FILE* fp = fopen(path, "r");
     if (!fp)
-        return false;
+        return connected;
 
     if (fgets(line, sizeof(line), fp))
     {
-        LOGD("%s", trim(line));
-#if defined(CONFIG_SOC_RK3588)
-        char* p = strchr(line, '=');
-        if (!p)
-            p = line;
-        else
-            p++;
+        LOGD("%s : %s", path, trim(line));
+        if (strcmp(line, "disconnected") == 0)
+            connected = false;
 
-        if (atoi(p) == 1)
-            return true;
-
-#elif defined(CONFIG_SOC_RPI5)
-        if (strncmp(line, "connected", 9) == 0)
-            return true;
-#endif
     }
     fclose(fp);
 
-    return false;
+    return connected;
 }
 
 void DisplayHotplugManager::notifyHotplugEvent(const char* devpath)
@@ -255,7 +227,7 @@ void DisplayHotplugManager::notifyHotplugEvent(const char* devpath)
     mListenerLock.unlock();
 }
 
-void DisplayHotplugManager::addListener(IDiplayHotplugListener* listener)
+void DisplayHotplugManager::addListener(IDisplayHotplugListener* listener)
 {
     Lock lock(mListenerLock);
 
@@ -263,7 +235,7 @@ void DisplayHotplugManager::addListener(IDiplayHotplugListener* listener)
         return;
 
     ListenerList::iterator it = std::find(mListeners.begin(), mListeners.end(), listener);
-    if(listener == *it)
+    if(it != mListeners.end())
     {
         LOGW("Listener is alreay exsit !!");
         return;
@@ -272,7 +244,7 @@ void DisplayHotplugManager::addListener(IDiplayHotplugListener* listener)
     mListeners.push_back(listener);
 }
 
-void DisplayHotplugManager::removeListener(IDiplayHotplugListener* listener)
+void DisplayHotplugManager::removeListener(IDisplayHotplugListener* listener)
 {
     Lock lock(mListenerLock);
 

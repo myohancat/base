@@ -14,7 +14,11 @@
 #include "EGLHelper.h"
 #include "Log.h"
 #include "SysTime.h"
+#ifdef USE_DRM_PLATFORM
+#include "DrmPlatform.h"
+#else
 #include "WaylandPlatform.h"
+#endif
 
 static char VERTEX_SHADER_SRC[] = R"(#version 300 es
 layout(location = 0) in vec4 a_Position;
@@ -58,7 +62,6 @@ static float TEX_COORDS[] =
 OnDisplayRenderer::OnDisplayRenderer()
               : Task(80, "OnDisplayRenderer")
 {
-    start();
 }
 
 OnDisplayRenderer::~OnDisplayRenderer()

@@ -56,12 +56,23 @@ EGLImage create_egl_image(int dmabuf_fd, int format, int width, int height, EGLD
         }
         case DRM_FORMAT_NV12:
         case DRM_FORMAT_NV16:
+        case DRM_FORMAT_NV24:
         {
             int stride = ALIGN(width, 16);
             n_planes = 2;
             strides[0] = stride;
-            offsets[1] = width * height;
-            strides[1] = stride;
+
+            if (format == DRM_FORMAT_NV12
+             || format == DRM_FORMAT_NV16)
+            {
+                offsets[1] = stride * height;
+                strides[1] = stride;
+            }
+            else
+            {
+                offsets[1] = stride * height;
+                strides[1] = stride * 2;
+            }
             break;
         }
         default:
@@ -134,7 +145,7 @@ void destroy_egl_image(EGLImage image, EGLDisplay display)
 #include <linux/dma-buf.h>
 #include <sys/ioctl.h>
 
-int create_dma_buf(int format, int width, int height)
+int create_dma_buf(int format, int width, int height, bool continuous)
 {
     int stride, size;
 
@@ -150,21 +161,39 @@ int create_dma_buf(int format, int width, int height)
             stride = ALIGN(width, 16) * 3;
             size = stride * height;
             break;
+        case DRM_FORMAT_YUYV:
+            stride = ALIGN(width, 16);
+            size   = stride * height * 2;
+            break;
         case DRM_FORMAT_NV12:
             stride = ALIGN(width, 16);
             size = stride * height * 3 / 2;
+            break;
+        case DRM_FORMAT_NV16:
+            stride = ALIGN(width, 16);
+            size = stride * height * 2;
+            break;
+        case DRM_FORMAT_NV24:
+            stride = ALIGN(width, 16);
+            size = stride * height * 3;
             break;
         default:
             LOGE("Unsupported format %x (%c%c%c%c)", format, format & 0xFF, (format >> 8) & 0xFF, (format >> 16) & 0xFF, (format >> 24) & 0xFF);
             return -1;
     }
 
-    return create_dma_buf(size);
+    return create_dma_buf(size, continuous);
 }
 
-int create_dma_buf(int size)
+int create_dma_buf(int size, bool continuous)
 {
-    int heap_fd = open("/dev/dma_heap/system", O_RDWR | O_CLOEXEC);
+    int heap_fd = -1;
+
+    if (continuous)
+        heap_fd = open("/dev/dma_heap/cma", O_RDWR | O_CLOEXEC);
+    else
+        heap_fd = open("/dev/dma_heap/system", O_RDWR | O_CLOEXEC);
+
     if (heap_fd < 0)
     {
         LOGE("Failed to open dma_heap device");
@@ -195,7 +224,6 @@ void dma_buf_sync(int fd)
     struct dma_buf_sync sync = {
         .flags = DMA_BUF_SYNC_START | DMA_BUF_SYNC_READ
     };
-
     ioctl(fd, DMA_BUF_IOCTL_SYNC, &sync);
 
     sync.flags = DMA_BUF_SYNC_END | DMA_BUF_SYNC_READ;

@@ -15,16 +15,20 @@ SRCS      += CondVar.cpp
 SRCS      += Log.cpp
 SRCS      += TimerTask.cpp
 SRCS      += SysTime.cpp
+SRCS      += Pipe.cpp
+SRCS      += MsgQ.cpp
+
+INCDIRS   += $(BASE_DIR)/utils
+SRCDIRS   += $(BASE_DIR)/utils
 SRCS      += NetUtil.cpp
 SRCS      += ProcessUtil.cpp
 SRCS      += FileUtil.cpp
-SRCS      += Pipe.cpp
 SRCS      += Util.cpp
-SRCS      += MsgQ.cpp
 
 INCDIRS   += $(BASE_DIR)/net
 SRCDIRS   += $(BASE_DIR)/net
 SRCS      += HttpServer.cpp
+SRCS      += HttpClient.cpp
 SRCS      += TcpServer.cpp
 
 INCDIRS   += $(BASE_DIR)/external/mongoose
@@ -51,10 +55,11 @@ SRCS      += I2C.cpp
 SRCS      += UART.cpp
 SRCS      += BUTTON.cpp
 SRCS      += LED.cpp
+SRCS      += RGB_LED.cpp
 SRCS      += EEPROM.cpp
 
 ifeq ($(WITH_RENDERABLE),yes)
-ifeq ($(CONFIG_USE_DRM),yes)
+ifeq ($(WITH_DRM),yes)
 DEFINES   += -DUSE_DRM_PLATFORM
 CFLAGS    += $(shell $(PKG_CONFIG) --cflags libdrm)
 CXXFLAGS  += $(shell $(PKG_CONFIG) --cflags libdrm)
@@ -69,6 +74,7 @@ DEFINES   += -DEGL_API_FB -DLINUX -DWL_EGL_PLATFORM
 LDFLAGS   += $(shell $(PKG_CONFIG) --libs wayland-client)
 LDFLAGS   += $(shell $(PKG_CONFIG) --libs wayland-egl)
 LDFLAGS   += $(shell $(PKG_CONFIG) --libs wayland-cursor)
+LDFLAGS   += $(shell $(PKG_CONFIG) --libs libdrm)
 DEFINES   += -DEGL_EGLEXT_PROTOTYPES
 LDFLAGS   += -lEGL
 DEFINES   += -DGL_VERSION_1_5
@@ -170,8 +176,6 @@ LDFLAGS   += $(shell $(PKG_CONFIG) --libs gstreamer-1.0 gstreamer-app-1.0 gstrea
 SRCS      += GstHelper.cpp
 SRCS      += GstAppsinkRenderable.cpp
 SRCS      += FilePlayer.cpp
-SRCS      += V4L2Player.cpp
-SRCS      += UdpStreamPlayer.cpp
 endif
 
 ifeq ($(WITH_XML),yes)

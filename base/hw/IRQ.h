@@ -18,14 +18,14 @@ class IIRQListener
 public:
     virtual ~IIRQListener() { };
 
-    virtual void onInterrupted(IRQ* irq, char value) = 0;
+    virtual void onInterrupted(IRQ* irq, bool value) = 0;
 };
 
 class IRQ : public GPIO, Task
 {
 public:
-    static IRQ* open(int num, GPIO_Edge_e egde = GPIO_EDGE_FALLING, bool activeLow = false);
-    static IRQ* open(int num, const std::string ioname, GPIO_Edge_e egde = GPIO_EDGE_FALLING, bool activeLow = false);
+    static IRQ* open(int num, GPIO_Edge_e edge = GPIO_EDGE_FALLING, bool activeLow = false);
+    static IRQ* open(int num, const std::string ioname, GPIO_Edge_e edge = GPIO_EDGE_FALLING, bool activeLow = false);
     virtual ~IRQ();
 
     void disable(bool isAsyncCall = true);
@@ -34,8 +34,8 @@ public:
     void setListener(IIRQListener* listener);
 
 private:
-    IRQ(int num, GPIO_Edge_e egde = GPIO_EDGE_FALLING, bool activeLow = false);
-    IRQ(int num, std::string ioname, GPIO_Edge_e egde = GPIO_EDGE_FALLING, bool activeLow = false);
+    IRQ(int num, GPIO_Edge_e edge = GPIO_EDGE_FALLING, bool activeLow = false);
+    IRQ(int num, std::string ioname, GPIO_Edge_e edge = GPIO_EDGE_FALLING, bool activeLow = false);
 
     void run();
 
@@ -56,4 +56,4 @@ private:
 };
 
 
-#endif //__GPIO_H_
+#endif //__IRQ_H_

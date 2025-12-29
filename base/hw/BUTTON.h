@@ -38,7 +38,7 @@ private:
     BUTTON(const char* name, IRQ* irq);
 
     void onTimerExpired(const ITimer* timer);
-    void onInterrupted(IRQ* irq, char value);
+    void onInterrupted(IRQ* irq, bool value);
 
 private:
     std::string mName;

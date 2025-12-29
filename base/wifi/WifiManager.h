@@ -79,7 +79,7 @@ class IWifiListener
 {
 public:
     virtual ~IWifiListener() { }
-
+    
     virtual void onWifiConnected() { };
     virtual void onWifiDisconnected(const char* str) { UNUSED(str); };
     virtual void onWifiScanStarted() { };
@@ -96,7 +96,7 @@ public:
 
     bool enable();
     void disable();
-
+   
     bool isConnected();
 	bool connect(const WifiDevice& dev, const char* psk);
 	bool connect(const char* ssid, const char* psk, const char* keymgmt="WPA-PSK", const char* proto=NULL, const char* pairwise=NULL, const char* group=NULL);
@@ -141,8 +141,8 @@ private:
 
     bool enableNetwork(int networkNum);
     void disableNetwork(int networkNum);
-    void removeNetwork(int networkNum);
-
+    bool removeNetwork(int networkNum);
+    
     bool setApScan(int value);
     bool setCountry(const char* country);
     bool setFrequency(int value);

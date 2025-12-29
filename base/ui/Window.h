@@ -340,7 +340,9 @@ inline void Window::update()
 inline void Window::update(const Rectangle& rect)
 {
     Lock lock(mUpdateLock);
+
     UNUSED(rect);
+
     mUpdate = true;
     if (RenderService::getInstance().getRenderMode() == RENDER_MODE_WHEN_DIRTY)
         RenderService::getInstance().update();

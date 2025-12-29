@@ -22,7 +22,7 @@ void IRQ::setListener(IIRQListener* listener)
     mListener = listener;
 }
 
-IRQ* IRQ::open(int num, GPIO_Edge_e egde, bool activeLow)
+IRQ* IRQ::open(int num, GPIO_Edge_e edge, bool activeLow)
 {
     if (!_exist(num))
     {
@@ -34,10 +34,10 @@ IRQ* IRQ::open(int num, GPIO_Edge_e egde, bool activeLow)
         }
     }
 
-    return new IRQ(num, egde, activeLow);
+    return new IRQ(num, edge, activeLow);
 }
 
-IRQ* IRQ::open(int num, const std::string ioname, GPIO_Edge_e egde, bool activeLow)
+IRQ* IRQ::open(int num, const std::string ioname, GPIO_Edge_e edge, bool activeLow)
 {
     if (!_exist(ioname))
     {
@@ -49,12 +49,13 @@ IRQ* IRQ::open(int num, const std::string ioname, GPIO_Edge_e egde, bool activeL
         }
     }
 
-    return new IRQ(num, ioname, egde, activeLow);
+    return new IRQ(num, ioname, edge, activeLow);
 }
 
-IRQ::IRQ(int num, GPIO_Edge_e egde, bool activeLow)
+IRQ::IRQ(int num, GPIO_Edge_e edge, bool activeLow)
     : GPIO(num),
-      mEdge(egde),
+      Task("IRQ"),
+      mEdge(edge),
       mActiveLow(activeLow)
 {
     char name[32];
@@ -68,9 +69,10 @@ IRQ::IRQ(int num, GPIO_Edge_e egde, bool activeLow)
     start();
 }
 
-IRQ::IRQ(int num, std::string ioname, GPIO_Edge_e egde, bool activeLow)
+IRQ::IRQ(int num, std::string ioname, GPIO_Edge_e edge, bool activeLow)
     : GPIO(num, ioname),
-      mEdge(egde),
+      Task("IRQ"),
+      mEdge(edge),
       mActiveLow(activeLow)
 {
     char name[32];

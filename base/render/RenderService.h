@@ -22,19 +22,27 @@
 #include "DisplayHotplugManager.h"
 #include "OnDisplayRenderer.h"
 
+#ifndef OFFSCREEN_WIDTH
+#define OFFSCREEN_WIDTH  1920
+#endif
+
+#ifndef OFFSCREEN_HEIGHT
+#define OFFSCREEN_HEIGHT 1080
+#endif
+
 class IRenderable
 {
 public:
     virtual ~IRenderable() { }
 
-    virtual int  getZOrder() { return 0; };
+    virtual int  getZOrder() { return 0; }
     virtual void onSurfaceCreated(int screenWidth, int screenHeight) = 0;
     virtual bool isNeedToDraw() = 0;
     virtual void onDrawFrame() = 0;
     virtual void onSurfaceRemoved() = 0;
 
 public:
-    static int compare(IRenderable* a, IRenderable* b)
+    static bool compare(IRenderable* a, IRenderable* b)
     {
         return a->getZOrder() < b->getZOrder();
     }
@@ -48,9 +56,6 @@ public:
     virtual void onRenderCompleted(int dmafd, int format, int width, int height) = 0;
 };
 
-#define OFFSCREEN_WIDTH  1920
-#define OFFSCREEN_HEIGHT 1080
-
 typedef enum
 {
     RENDER_MODE_CONTINUOUSLY,
@@ -59,7 +64,7 @@ typedef enum
     MAX_RENDER_MODE
 } RenderMode_e;
 
-class RenderService : public Task, ITimerHandler, IDiplayHotplugListener
+class RenderService : public Task, ITimerHandler, IDisplayHotplugListener
 {
 public:
     static RenderService& getInstance();

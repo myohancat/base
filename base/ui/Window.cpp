@@ -202,7 +202,7 @@ void Window::addWidget(IWidget* widget)
         return;
 
     WidgetList::iterator it = std::find(mWidgetList.begin(), mWidgetList.end(), widget);
-    if(widget == *it)
+    if(it != mWidgetList.end())
         return;
 
     widget->setWindow(this);

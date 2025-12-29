@@ -10,10 +10,10 @@
 #include "MainLoop.h"
 #include <vector>
 
-class IDiplayHotplugListener
+class IDisplayHotplugListener
 {
 public:
-    virtual ~IDiplayHotplugListener() { }
+    virtual ~IDisplayHotplugListener() { }
 
     virtual void onDisplayPlugged() = 0;
     virtual void onDisplayRemoved() = 0;
@@ -26,8 +26,8 @@ public:
 
     bool isPlugged();
 
-    void addListener(IDiplayHotplugListener* listener);
-    void removeListener(IDiplayHotplugListener* listener);
+    void addListener(IDisplayHotplugListener* listener);
+    void removeListener(IDisplayHotplugListener* listener);
 
 protected:
     int  getFD();
@@ -45,7 +45,7 @@ private:
     int   mSock;
 
     Mutex mListenerLock;
-    typedef std::list<IDiplayHotplugListener*> ListenerList;
+    typedef std::list<IDisplayHotplugListener*> ListenerList;
     ListenerList mListeners;
 };
 

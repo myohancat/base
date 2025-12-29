@@ -1,9 +1,7 @@
 /**
  * Simple multimedia using gstreamer
  *
- * Author: Kyungyin.Kim < kyungyin.kim@medithinq.com >
- * Author: Soyun.Park   < sypark@medithinq.com >
- * Copyright (c) 2024, MedithinQ. All rights reserved.
+ * author: Kyungyin.Kim < myohancat@naver.com >
  */
 #include "GstAppsinkRenderable.h"
 

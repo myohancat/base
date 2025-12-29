@@ -16,7 +16,7 @@
 #include "SysTime.h"
 #include "Log.h"
 
-#define DELAY_FOR_30_FPS         33 /* 1000ms/30 */
+#define DELAY_FOR_30_FPS         17 /* 1000ms/30 */
 
 #define MSG_ID_ADD_RENDERER      1
 #define MSG_ID_REMOVE_RENDERER   2
@@ -35,8 +35,10 @@ RenderService::RenderService()
     mTimer.setHandler(this);
     DisplayHotplugManager::getInstance().addListener(this);
 
-    if (DisplayHotplugManager::getInstance().isPlugged())
-        onDisplayPlugged();
+    MainLoop::getInstance().post([this] {
+        if (DisplayHotplugManager::getInstance().isPlugged())
+            onDisplayPlugged();
+    });
 }
 
 RenderService::~RenderService()
@@ -137,8 +139,8 @@ __TRACE__
             }
             case MSG_ID_UPDATE:
             {
-                //if (mRenderMode != RENDER_MODE_CONTINUOUSLY)
-                //{
+                if (mRenderMode != RENDER_MODE_CONTINUOUSLY)
+                {
                     Lock lock(mRendererLock);
 
                     bool forceToDraw = msg.arg;
@@ -155,7 +157,7 @@ __TRACE__
 
                     if (!forceToDraw && !isNeedToDraw)
                         continue;
-                //}
+                }
 
                 index = (index + 1) % MAX_FBO;
 
@@ -180,6 +182,8 @@ __TRACE__
 
                 if (fbos[index]->dmabuf() != -1)
                 {
+                    EGLHelper::dma_buf_sync(fbos[index]->dmabuf());
+
                     Lock lock(mRendererLock);
 
                     if (mOnDisplayRenderer)
@@ -209,6 +213,8 @@ __TRACE__
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <gbm.h>
+#include <xf86drm.h>
+#include <xf86drmMode.h>
 
 static EGLDisplay _getDisplay()
 {
@@ -218,6 +224,16 @@ static EGLDisplay _getDisplay()
         LOGE("rfd cannot open");
         return NULL;
     }
+
+#if 1 // W/A Code
+    drmModeRes* res = drmModeGetResources(rfd);
+    for (int i = 0; i < res->count_connectors; i++)
+    {
+        drmModeConnector* connector = drmModeGetConnector(rfd, res->connectors[i]);
+        CHECK("connector : %p, connector->connection : %d", connector, connector->connection);
+        drmModeFreeConnector(connector);
+    }
+#endif
 
     gbm_device* gbm = gbm_create_device(rfd); // TODO MUST DESTROYED
     if (!gbm)
@@ -302,7 +318,7 @@ __TRACE__
         return;
 
     RendererList::iterator it = std::find(mRenderers.begin(), mRenderers.end(), renderer);
-    if(*it == renderer)
+    if(it != mRenderers.end())
         return;
 
     mRenderers.push_back(renderer);
@@ -344,7 +360,7 @@ void RenderService::addRenderObserver(IRenderObserver* observer)
         return;
 
     ObserverList::iterator it = std::find(mObservers.begin(), mObservers.end(), observer);
-    if(observer == *it)
+    if(it != mObservers.end())
     {
         LOGW("RenderObserver is alreay exsit !!");
         return;
@@ -406,7 +422,10 @@ void RenderService::onDisplayPlugged()
     CHECK("@@@@@@@@@@ onDisplayPlugged()");
 
     SAFE_DELETE(mOnDisplayRenderer);
+
     mOnDisplayRenderer = new OnDisplayRenderer();
+    mOnDisplayRenderer->setCpuAffinity(getCpuAffinity());
+    mOnDisplayRenderer->start();
     update();
 }
 
@@ -420,8 +439,6 @@ void RenderService::onDisplayRemoved()
 
 void RenderService::update(bool forceToDraw)
 {
-    Lock lock(mRendererLock);
-
     if (mRenderMode == RENDER_MODE_CONTINUOUSLY)
         return;
 

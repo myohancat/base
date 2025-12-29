@@ -48,6 +48,9 @@ struct ImageFrame
 
 class IRenderer
 {
+public:
+    virtual ~IRenderer() { }
+
     virtual void setColorMode(ColorMode_e eMode) = 0;
     virtual void setView(int x, int y, int width, int height) = 0;
     virtual void setCrop(int x, int y, int width, int height) = 0;

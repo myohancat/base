@@ -34,6 +34,7 @@ public:
     virtual ~Task();
 
     void setCpuAffinity(int cpuid);
+    int  getCpuAffinity() const;
 
     bool start();
     void stop();
@@ -69,6 +70,11 @@ private:
     static void* _task_proc_priv(void* param);
 
 };
+
+inline int Task::getCpuAffinity() const
+{
+    return mCpuId;
+}
 
 inline void Task::sleep(int sec)
 {

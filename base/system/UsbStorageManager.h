@@ -11,6 +11,7 @@
 #include "Queue.h"
 #include "UsbHotplugManager.h"
 
+#include <vector>
 #include <list>
 #include <map>
 
@@ -41,7 +42,7 @@ public:
     bool addListener(IUsbStorageListener* listener);
     void removeListener(IUsbStorageListener* listener);
 
-    std::list<std::string> getMountPoints();
+    std::vector<std::string> getMountPoints();
 
 protected:
     UsbStorageManager();

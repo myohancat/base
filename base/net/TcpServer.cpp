@@ -163,7 +163,7 @@ void TcpServer::notifyTcpSessionEstablished(TcpSession* session)
     Lock lock(mLock);
 
     std::list<TcpSession*>::iterator it = std::find(mSessions.begin(), mSessions.end(), session);
-    if(session == *it)
+    if(it != mSessions.end())
     {
         LOGE("Session %s is alreay exsit !!");
         return;

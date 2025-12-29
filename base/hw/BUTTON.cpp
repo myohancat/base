@@ -64,11 +64,10 @@ void BUTTON::setListener(IButtonListener* listener)
     mListener = listener;
 }
 
-void BUTTON::onInterrupted(IRQ* irq, char value)
+void BUTTON::onInterrupted(IRQ* irq, bool value)
 {
     UNUSED(irq);
-    bool isPressed = (value == 1);
-    if (isPressed)
+    if (value)
     {
         Lock lock(mLock);
         mRepeatTimer.start(500, true);

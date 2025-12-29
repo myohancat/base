@@ -15,8 +15,9 @@
 #include "Task.h"
 #include "Queue.h"
 #include "Platform.h"
+#include "Log.h"
 
-class OnDisplayRenderer : Task
+class OnDisplayRenderer : public Task
 {
 public:
     OnDisplayRenderer();
@@ -65,7 +66,16 @@ private:
             : mDmaFD(dmafd), mFormat(format), mWidth(width), mHeight(height) { }
     };
 
-    Queue<DmaBufImage, 1> mMsgQ;
+    class DmaBufImageQueue : public Queue<DmaBufImage, 1>
+    {
+    protected:
+        void dispose(UNUSED_PARAM DmaBufImage image)
+        {
+            LOGD("OnDisplayRenderer Drop.");
+        }
+    };
+
+    DmaBufImageQueue mMsgQ;
 };
 
 

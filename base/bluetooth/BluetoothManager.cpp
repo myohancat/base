@@ -73,7 +73,7 @@ void BluetoothManager::addBluetoothListener(IBluetoothListener* listener)
         return;
 
     BtListenerList::iterator it = std::find(mBtListeners.begin(), mBtListeners.end(), listener);
-    if(listener == *it)
+    if(it != mBtListeners.end())
         return;
 
     mBtListeners.push_back(listener);

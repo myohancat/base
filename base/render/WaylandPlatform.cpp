@@ -321,7 +321,7 @@ __TRACE__
 #endif
 
     /* W/A code for resolution setting. */
-    for (int ii = 0; ii < 100; ii++)
+    for (int ii = 0; ii < 1000; ii++)
     {
         if (mScreenWidth > 0 && mScreenHeight > 0)
             break;
@@ -329,16 +329,30 @@ __TRACE__
         wl_display_dispatch(mDisplay);
     }
 
+    CHECK("@@@@ %dx%d", mScreenWidth, mScreenHeight);
     createWindow(mScreenWidth, mScreenHeight);
 
+    mExitTask = false;
     start();
 }
 
+#include "NetUtil.h"
 void WaylandPlatform::run()
 {
-    while (wl_display_dispatch(mDisplay) != -1)
+__TRACE__
+    while (!mExitTask)
     {
-        /* This space deliberately left blank */
+        wl_display_dispatch_pending(mDisplay);
+        wl_display_flush(mDisplay);
+
+        if (wl_display_prepare_read(mDisplay) == 0)
+        {
+            int fd = wl_display_get_fd(mDisplay);
+            if (NetUtil::fd_poll(fd, POLL_REQ_IN, 300, mPipe.getFD()) == POLL_SUCCESS)
+                wl_display_read_events(mDisplay);
+            else
+                wl_display_cancel_read(mDisplay);
+        }
     }
 }
 
@@ -407,6 +421,10 @@ __TRACE__
 
 WaylandPlatform::~WaylandPlatform()
 {
+    mExitTask = true;
+    mPipe.write("T", 1);
+    stop();
+
     destroyWindow();
 
 #if defined(CONFIG_SOC_RK3588)

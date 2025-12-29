@@ -247,7 +247,7 @@ bool UsbStorageManager::addListener(IUsbStorageListener* listener)
         return false;
 
     std::list<IUsbStorageListener*>::iterator it = std::find(mListeners.begin(), mListeners.end(), listener);
-    if (listener == *it)
+    if (it != mListeners.end())
     {
         LOGE("IUsbStorageListener is alreay exsit !!");
         return false;
@@ -275,21 +275,21 @@ void UsbStorageManager::removeListener(IUsbStorageListener* listener)
     }
 }
 
-std::list<std::string> UsbStorageManager::getMountPoints()
+std::vector<std::string> UsbStorageManager::getMountPoints()
 {
     Lock lock(mLock);
 
-    std::list<std::string> list;
+    std::vector<std::string> array;
 
     std::map<std::string, int>::iterator it;
     for (it = mMountPoints.begin(); it != mMountPoints.end(); it++)
     {
         char mountPoint[2*1024];
-        sprintf(mountPoint, "%s/usb%d", MOUNT_PREFIX, it->second);
-        list.push_back(mountPoint);
+        sprintf(mountPoint, "%s%d", MOUNT_PREFIX, it->second);
+        array.push_back(mountPoint);
     }
 
-    return list;
+    return array;
 }
 
 bool UsbStorageManager::onPreStart()

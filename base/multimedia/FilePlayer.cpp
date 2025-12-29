@@ -1,9 +1,7 @@
 /**
  * Simple multimedia using gstreamer
  *
- * Author: Kyungyin.Kim < kyungyin.kim@medithinq.com >
- * Author: Soyun.Park   < sypark@medithinq.com >
- * Copyright (c) 2024, MedithinQ. All rights reserved.
+ * author: Kyungyin.Kim < myohancat@naver.com >
  */
 #include "FilePlayer.h"
 
@@ -70,17 +68,8 @@ GstElement* FilePlayer::createGstPipeline()
     ss << "filesrc location=" << mFilePath;
     ss << " ! " << demuxer;
     ss << " ! h264parse ";
-#if defined(CONFIG_SOC_RK3588)
     ss << " ! mppvideodec name=dec format=23 dma-feature=TRUE ";
-#elif defined(CONFIG_SOC_IMX8MQ)
-    ss << " ! vpudec name=dec";
-#elif defined(CONFIG_SOC_XAVIER_NX)
-    ss << " ! nvv4l2decoder name=dec ! nvvidconv ";
-    ss << " ! video/x-raw(memory:NVMM), format=(string)RGBA";
-#else
-    ss << " ! v4l2slh264dec ! glupload ";
-#endif
-    ss << " ! appsink name=sink";
+    ss << " ! appsink name=sink sync=true";
 
     mPipeline = gst_parse_launch(ss.str().c_str(), &err);
     if (err != NULL)

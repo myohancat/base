@@ -20,8 +20,8 @@
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 
-//#define USE_SYNC_FLIP /* It cause hangup in 60FPS */
-#define FLIP_CALL_DIRECTLY
+#define USE_SYNC_FLIP /* It cause hangup in 60FPS */
+//#define FLIP_CALL_DIRECTLY
 
 class DrmPlatform : public IPlatform, Task
 {

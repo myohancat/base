@@ -38,9 +38,9 @@ void MainLoop::addFdWatcher(IFdWatcher* watcher)
         return;
 
     FdWatcherList::iterator it = std::find(mFdWatchers.begin(), mFdWatchers.end(), watcher);
-    if(watcher == *it)
+    if(it != mFdWatchers.end())
     {
-        LOGE("FdWatcher is alreay exsit !!");
+        LOGE("FdWatcher is alreay exist !!");
         return;
     }
 
@@ -56,7 +56,7 @@ void MainLoop::removeFdWatcher(IFdWatcher* watcher)
 
     for(FdWatcherList::iterator it = mFdWatchers.begin(); it != mFdWatchers.end(); it++)
     {
-        if(watcher == *it)
+        if(*it == watcher)
         {
             mFdWatchers.erase(it);
             return;
@@ -72,7 +72,7 @@ void MainLoop::addTimer(Timer* timer)
         return;
 
     TimerList::iterator it = std::find(mTimers.begin(), mTimers.end(), timer);
-    if(timer == *it)
+    if(it != mTimers.end())
     {
         LOGE("timer is alreay exsit !!");
         return;
@@ -91,7 +91,7 @@ void MainLoop::removeTimer(Timer* timer)
 
     for(TimerList::iterator it = mTimers.begin(); it != mTimers.end(); it++)
     {
-        if(timer == *it)
+        if(*it == timer)
         {
             mTimers.erase(it);
             mTimers.sort(timer_sort);
@@ -137,7 +137,6 @@ uint32_t MainLoop::runTimers()
     return timeout;
 }
 
-#define _MAX(x, y)   ((x>y)?x:y)
 bool MainLoop::loop()
 {
     int      nCnt = 0;
@@ -151,11 +150,13 @@ bool MainLoop::loop()
     nLastFd = mPipe[0];
     FD_SET(mPipe[0], &sReadFds);
 
+    mFdWatcherLock.lock();
     for(FdWatcherList::iterator it = mFdWatchers.begin(); it != mFdWatchers.end(); it++)
     {
-        nLastFd = _MAX((*it)->getFD(), nLastFd);
+        nLastFd = MAX((*it)->getFD(), nLastFd);
         FD_SET((*it)->getFD(), &sReadFds);
     }
+    mFdWatcherLock.unlock();
 
     if(nLastFd < 0)
         return false;
@@ -181,10 +182,10 @@ bool MainLoop::loop()
     {
         if(errno == EINTR)
         {
-            /* INTERRUPT RECIEVED */
+            /* INTERRUPT RECEIVED */
             return true;
         }
-        LOGE("select error oucced!!! errno=%d", errno);
+        LOGE("select error occured!!! errno=%d", errno);
         return false;
     }
 
@@ -205,7 +206,7 @@ bool MainLoop::loop()
             case 'S':
                 return true;
             default:
-                LOGE("Unkown Thread Command Inputed '%c'!!!", cCmd);
+                LOGE("Unknown Thread Command Inputed '%c'!!!", cCmd);
                 return true;
         }
     }
@@ -233,15 +234,22 @@ void MainLoop::post(const std::function<void()> &func)
 
 bool MainLoop::runFunctions()
 {
-    Lock lock(mFunctionLock);
+	std::function<void()> func = nullptr;
+	{
+		Lock lock(mFunctionLock);
 
-    for(FunctionList::iterator it = mFunctions.begin(); it != mFunctions.end(); it++)
-    {
-        (*it)();
-        mFunctions.erase(it);
-        return true;
-    }
+        if (!mFunctions.empty())
+        {
+            func = mFunctions.front();
+            mFunctions.pop_front();
+        }
+	}
 
+	if (func)
+	{
+		func();
+		return true;
+	}
     return false;
 }
 

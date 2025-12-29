@@ -46,7 +46,7 @@ public:
     bool         getValue();
     void         setValue(bool value);
 
-    std::string& getPath() { return mPath; }
+    const std::string& getPath() { return mPath; }
 
     int          getNumber() { return mNum; }
 

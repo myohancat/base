@@ -15,6 +15,10 @@
 class AsyncOnceTask : public Task
 {
 public:
+    AsyncOnceTask() : Task("AsyncOnceTask")
+    {
+    }
+
     ~AsyncOnceTask()
     {
         stop();
@@ -48,6 +52,7 @@ void Task::asyncOnce(const std::function<void()> &func)
 
 Task::Task()
      : mPriority(0),
+       mCpuId(-1),
        mName("Task"),
        mId(-1),
        mState(TASK_STATE_INIT)

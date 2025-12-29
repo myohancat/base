@@ -1,9 +1,7 @@
 /**
  * Simple multimedia using gstreamer
  *
- * Author: Kyungyin.Kim < kyungyin.kim@medithinq.com >
- * Author: Soyun.Park   < sypark@medithinq.com >
- * Copyright (c) 2024, MedithinQ. All rights reserved.
+ * author: Kyungyin.Kim < myohancat@naver.com >
  */
 #ifndef __GST_APP_SINK_RENDERABLE_H_
 #define __GST_APP_SINK_RENDERABLE_H_
@@ -55,10 +53,10 @@ private:
     /* DO NOT OVERRIDE THIS */
     int  getZOrder();
     bool isVisible();
-    void onSurfaceCreated(int screenWidth, int screenHeight);
-    bool isNeedToDraw();
-    void onDrawFrame();
-    void onSurfaceRemoved();
+    void onSurfaceCreated(int screenWidth, int screenHeight) override;
+    bool isNeedToDraw() override;
+    void onDrawFrame() override;
+    void onSurfaceRemoved() override;
 
 private:
     class GstSampleQueue : public Queue<GstSample*, 1>
