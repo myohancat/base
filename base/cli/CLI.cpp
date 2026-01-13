@@ -18,11 +18,293 @@
 
 #define IS_QUOTE(ch)   (ch == '"' || ch == '\'')
 
-#define CLI_WELCOME_MSG  "Welcome to the Metascope Service ...!"
-#define CLI_PROMPT       "Metascope $ "
+#define CLI_WELCOME_MSG  "Welcome to the Service ...!"
+#define CLI_PROMPT       "DEBUG $ "
 
 #define SEND_TIMEOUT  1000
 #define RECV_TIMEOUT  3000
+
+class TelnetSession : public ICliSession
+{
+public:
+    TelnetSession(TcpSession* session) : mSession(session) { };
+    ~TelnetSession() { };
+
+    void stop();
+
+    void print(const char* fmt, ...) override;
+    void printHistory();
+
+    char* getLine();
+
+    const char* searchHistory(int step);
+    void removeHistory();
+    void insertHistory(const char* cmd);
+
+    void processVKey(const VKey_t* vkey);
+
+    void doInsertChars(const char* charIn, int charInCnt);
+    void doErase(int eraseCnt);
+    void doDelete(int deleteCnt);
+    void doReturn();
+    void doMoveLeft();
+    void doMoveRight();
+    void doClearLine();
+
+    void reset();
+
+    void setCR(bool value);
+    bool isCR();
+
+protected:
+    bool mCR = false;
+    char mLine[MAX_READ_LINE_LEN];
+    int  mCharCnt = 0;
+    int  mCaretPos = 0;
+
+    char mCmdLines[MAX_HISTORY_CNT][MAX_READ_LINE_LEN];
+    int  mFirstHistory = 0;
+    int  mLastHistory  = MAX_HISTORY_CNT - 1;
+    int  mCountHistory = 0;
+    int  mStepHistory = -1;
+
+    TcpSession* mSession;
+};
+
+inline void  TelnetSession::stop() { mSession->stop(); }
+inline char* TelnetSession::getLine() { return mLine; }
+inline void  TelnetSession::setCR(bool value) { mCR = value; }
+inline bool  TelnetSession::isCR() { return mCR; }
+
+static int make_args(const char* command, char*** pargv)
+{
+    char   buf[MAX_READ_LINE_LEN];
+    int    argc = 0;
+    char** argv = NULL;
+    char*  p = buf, *start = NULL, *end = NULL;
+
+    if (command == NULL)
+    {
+        *pargv = NULL;
+        return 0;
+    }
+
+    strncpy(buf, command, MAX_READ_LINE_LEN -1);
+    buf[MAX_READ_LINE_LEN -1] = 0;
+
+    while(*p)
+    {
+        if (!start)
+        {
+            while(isspace(*p)) p++;
+            if (*p == 0) break;
+            start = p;
+        }
+        else
+        {
+            if (!IS_QUOTE(*start))
+            {
+                while(*p && !isspace(*p)) p++;
+                if (*p == 0) end = p-1;
+                else { end = p - 1; *p = 0; }
+            }
+            else
+            {
+                while(*p && *start != *p) p++;
+                if (*p == 0) end = p-1;
+                else { start ++; end = p - 1; *p = 0; }
+            }
+        }
+
+        p++;
+
+        if (start && (end || *p == 0))
+        {
+            argv = (char**)realloc(argv, sizeof(char*) * (argc + 1));
+            argv[argc++] = strdup(start);
+            start = end = NULL;
+        }
+    }
+
+    if (argv)
+    {
+        argv = (char**)realloc(argv, sizeof(char*) * (argc + 1));
+        argv[argc] = NULL;
+    }
+
+    *pargv = argv;
+
+    return argc;
+}
+
+static void free_args(char** argv)
+{
+    int ii;
+    if (!argv)
+        return;
+
+    for(ii = 0; argv[ii]; ii++)
+        free(argv[ii]);
+
+    free(argv);
+}
+
+void CLI::cmd_exit(ICliSession* session, int argc, char** argv, void* param)
+{
+    UNUSED(param);
+    UNUSED(argc);
+    UNUSED(argv);
+
+    TelnetSession* telnetSession = (TelnetSession*)session;
+    telnetSession->stop();
+}
+
+CLI& CLI::getInstance()
+{
+    static CLI _instance;
+
+    return _instance;
+}
+
+CLI::CLI()
+{
+    addCommand("clear",   cmd_clear,   this, "clear screen");
+    addCommand("help",    cmd_help,    this, "show help");
+    addCommand("history", cmd_history, this, "show history");
+    addCommand("exit",    cmd_exit,    this, "exit program");
+}
+
+CLI::~CLI()
+{
+    stop();
+}
+
+bool CLI::start()
+{
+    mServer.setSessionListener(this);
+    return mServer.start(CLI_SERVER_PORT);
+}
+
+void CLI::stop()
+{
+    mServer.stop();
+    mServer.setSessionListener(NULL);
+}
+
+void CLI::onTcpSessionEstablished(TcpSession* session)
+{
+    static uint8_t charactor_mode[] = {255, 251, 1, 255, 251, 3, 255, 252, 34};
+
+    char line[2048];
+
+    TelnetSession* telnetSession = new TelnetSession(session);
+    session->setParam(telnetSession);
+
+    // Mode Setting
+    NetUtil::send(session->getFD(), charactor_mode, sizeof(charactor_mode), SEND_TIMEOUT);
+
+    // Flush Response
+    NetUtil::recv(session->getFD(), line, 1, RECV_TIMEOUT);
+    if(line[0] == (char)-1) // TODO
+    {
+        int rc = read(session->getFD(), line, sizeof(line));
+        // TODO
+        UNUSED(rc);
+    }
+
+    strcpy(line, "\r\n" CLI_WELCOME_MSG "\r\n");
+    NetUtil::send(session->getFD(), line, strlen(line), SEND_TIMEOUT);
+    NetUtil::send(session->getFD(), CLI_PROMPT, strlen(CLI_PROMPT), SEND_TIMEOUT);
+}
+
+void CLI::onTcpSessionRemoved(TcpSession* session)
+{
+    TelnetSession* telnetSession = (TelnetSession*)session->getParam();
+    session->setParam(NULL);
+
+    delete telnetSession;
+}
+
+void CLI::onTcpSessionReadable(TcpSession* session)
+{
+    VKey_t vkey;
+
+    TelnetSession* telnetSession = (TelnetSession*)session->getParam();
+
+    if (ReadVKey(session->getFD(), &vkey) == 1)
+    {
+        /* Convert 0xD0 0x00 to RETURN */
+        if (vkey.mCode == VKEY_CODE_CARRIAGE_RETURN)
+        {
+            telnetSession->setCR(true);
+        }
+        else if (vkey.mCode == VKEY_CODE_NULL)
+        {
+            if (telnetSession->isCR())
+            {
+                vkey.mCode = VKEY_CODE_RETURN;
+                telnetSession->setCR(false);
+            }
+        }
+        else
+            telnetSession->setCR(false);
+
+        telnetSession->processVKey(&vkey);
+
+        if (vkey.mCode == VKEY_CODE_RETURN)
+        {
+            char** argv = NULL;
+            int argc = make_args(telnetSession->getLine(), &argv);
+            if(argv)
+            {
+                Lock lock(mLock);
+                auto it = mCmdMap.find(argv[0]);
+                if (it != mCmdMap.end())
+                {
+                    it->second->execute(telnetSession, argc, argv);
+                }
+                else
+                {
+                    telnetSession->print("%s: command not found\n", argv[0]);
+                }
+
+                free_args(argv);
+            }
+            telnetSession->reset();
+            NetUtil::send(session->getFD(), CLI_PROMPT, strlen(CLI_PROMPT), SEND_TIMEOUT);
+        }
+    }
+}
+
+void CLI::addCommand(const char* command, CLI_Func fnCli, void* param, const char* desc)
+{
+    Lock lock(mLock);
+
+    auto it = mCmdMap.find(command);
+    if (it != mCmdMap.end())
+    {
+        LOGE("already has a command : %s", command);
+        return;
+    }
+
+    if (desc)
+        mCmdMap.insert(std::pair<std::string, std::shared_ptr<Command>>(command,
+                                std::make_shared<Command>(command, param, fnCli, desc)));
+    else
+        mCmdMap.insert(std::pair<std::string, std::shared_ptr<Command>>(command,
+                                std::make_shared<Command>(command, param, fnCli)));
+}
+
+void CLI::removeCommand(const char* command)
+{
+    Lock lock(mLock);
+
+    auto it = mCmdMap.find(command);
+    if (it == mCmdMap.end())
+        return;
+
+    mCmdMap.erase(it);
+}
 
 void TelnetSession::print(const char* fmt, ...)
 {
@@ -345,80 +627,7 @@ void TelnetSession::reset()
     mCaretPos = 0;
 }
 
-static int make_args(const char* command, char*** pargv)
-{
-    char   buf[MAX_READ_LINE_LEN];
-    int    argc = 0;
-    char** argv = NULL;
-    char*  p = buf, *start = NULL, *end = NULL;
-
-    if (command == NULL)
-    {
-        *pargv = NULL;
-        return 0;
-    }
-
-    strncpy(buf, command, MAX_READ_LINE_LEN -1);
-    buf[MAX_READ_LINE_LEN -1] = 0;
-
-    while(*p)
-    {
-        if (!start)
-        {
-            while(isspace(*p)) p++;
-            if (*p == 0) break;
-            start = p;
-        }
-        else
-        {
-            if (!IS_QUOTE(*start))
-            {
-                while(*p && !isspace(*p)) p++;
-                if (*p == 0) end = p-1;
-                else { end = p - 1; *p = 0; }
-            }
-            else
-            {
-                while(*p && *start != *p) p++;
-                if (*p == 0) end = p-1;
-                else { start ++; end = p - 1; *p = 0; }
-            }
-        }
-
-        p++;
-
-        if (start && (end || *p == 0))
-        {
-            argv = (char**)realloc(argv, sizeof(char*) * (argc + 1));
-            argv[argc++] = strdup(start);
-            start = end = NULL;
-        }
-    }
-
-    if (argv)
-    {
-        argv = (char**)realloc(argv, sizeof(char*) * (argc + 1));
-        argv[argc] = NULL;
-    }
-
-    *pargv = argv;
-
-    return argc;
-}
-
-static void free_args(char** argv)
-{
-    int ii;
-    if (!argv)
-        return;
-
-    for(ii = 0; argv[ii]; ii++)
-        free(argv[ii]);
-
-    free(argv);
-}
-
-void CLI::cmd_clear(void* session, int argc, char** argv, void* param)
+void CLI::cmd_clear(ICliSession* session, int argc, char** argv, void* param)
 {
 //    static const char* clr = "\x1[2j";
     static const char* clr = "\33[H\33[2J";
@@ -428,7 +637,7 @@ void CLI::cmd_clear(void* session, int argc, char** argv, void* param)
     CLI_OUT(clr);
 }
 
-void CLI::cmd_help(void* session, int argc, char** argv, void* param)
+void CLI::cmd_help(ICliSession* session, int argc, char** argv, void* param)
 {
     UNUSED(param);
     UNUSED(argc);
@@ -444,7 +653,7 @@ void CLI::cmd_help(void* session, int argc, char** argv, void* param)
     }
 }
 
-void CLI::cmd_history(void* session, int argc, char** argv, void* param)
+void CLI::cmd_history(ICliSession* session, int argc, char** argv, void* param)
 {
     TelnetSession* telnetSession = (TelnetSession*)session;
     UNUSED(param);
@@ -452,162 +661,5 @@ void CLI::cmd_history(void* session, int argc, char** argv, void* param)
     UNUSED(argv);
 
     telnetSession->printHistory();
-}
-
-void CLI::cmd_exit(void* session, int argc, char** argv, void* param)
-{
-    UNUSED(param);
-    UNUSED(argc);
-    UNUSED(argv);
-
-    TelnetSession* telnetSession = (TelnetSession*)session;
-    telnetSession->stop();
-}
-
-CLI& CLI::getInstance()
-{
-    static CLI _instance;
-
-    return _instance;
-}
-
-CLI::CLI()
-{
-    addCommand("clear",   cmd_clear,   this, "clear screen");
-    addCommand("help",    cmd_help,    this, "show help");
-    addCommand("history", cmd_history, this, "show history");
-    addCommand("exit",    cmd_exit,    this, "exit program");
-}
-
-CLI::~CLI()
-{
-    stop();
-}
-
-bool CLI::start()
-{
-    mServer.setSessionListener(this);
-    return mServer.start(CLI_SERVER_PORT);
-}
-
-void CLI::stop()
-{
-    mServer.stop();
-    mServer.setSessionListener(NULL);
-}
-
-void CLI::onTcpSessionEstablished(TcpSession* session)
-{
-    static uint8_t charactor_mode[] = {255, 251, 1, 255, 251, 3, 255, 252, 34};
-
-    char line[2048];
-
-    TelnetSession* telnetSession = new TelnetSession(session);
-    session->setParam(telnetSession);
-
-    // Mode Setting
-    NetUtil::send(session->getFD(), charactor_mode, sizeof(charactor_mode), SEND_TIMEOUT);
-
-    // Flush Response
-    NetUtil::recv(session->getFD(), line, 1, RECV_TIMEOUT);
-    if(line[0] == (char)-1) // TODO
-    {
-        int rc = read(session->getFD(), line, sizeof(line));
-        // TODO
-        UNUSED(rc);
-    }
-
-    strcpy(line, "\r\n" CLI_WELCOME_MSG "\r\n");
-    NetUtil::send(session->getFD(), line, strlen(line), SEND_TIMEOUT);
-    NetUtil::send(session->getFD(), CLI_PROMPT, strlen(CLI_PROMPT), SEND_TIMEOUT);
-}
-
-void CLI::onTcpSessionRemoved(TcpSession* session)
-{
-    TelnetSession* telnetSession = (TelnetSession*)session->getParam();
-    session->setParam(NULL);
-
-    delete telnetSession;
-}
-
-void CLI::onTcpSessionReadable(TcpSession* session)
-{
-    VKey_t vkey;
-
-    TelnetSession* telnetSession = (TelnetSession*)session->getParam();
-
-    if (ReadVKey(session->getFD(), &vkey) == 1)
-    {
-        /* Convert 0xD0 0x00 to RETURN */
-        if (vkey.mCode == VKEY_CODE_CARRIAGE_RETURN)
-        {
-            telnetSession->setCR(true);
-        }
-        else if (vkey.mCode == VKEY_CODE_NULL)
-        {
-            if (telnetSession->isCR())
-            {
-                vkey.mCode = VKEY_CODE_RETURN;
-                telnetSession->setCR(false);
-            }
-        }
-        else
-            telnetSession->setCR(false);
-
-        telnetSession->processVKey(&vkey);
-
-        if (vkey.mCode == VKEY_CODE_RETURN)
-        {
-            char** argv = NULL;
-            int argc = make_args(telnetSession->getLine(), &argv);
-            if(argv)
-            {
-                Lock lock(mLock);
-                auto it = mCmdMap.find(argv[0]);
-                if (it != mCmdMap.end())
-                {
-                    it->second->execute(telnetSession, argc, argv);
-                }
-                else
-                {
-                    telnetSession->print("%s: command not found\n", argv[0]);
-                }
-
-                free_args(argv);
-            }
-            telnetSession->reset();
-            NetUtil::send(session->getFD(), CLI_PROMPT, strlen(CLI_PROMPT), SEND_TIMEOUT);
-        }
-    }
-}
-
-void CLI::addCommand(const char* command, CLI_Func fnCli, void* param, const char* desc)
-{
-    Lock lock(mLock);
-
-    auto it = mCmdMap.find(command);
-    if (it != mCmdMap.end())
-    {
-        LOGE("already has a command : %s", command);
-        return;
-    }
-
-    if (desc)
-        mCmdMap.insert(std::pair<std::string, std::shared_ptr<Command>>(command,
-                                std::make_shared<Command>(command, param, fnCli, desc)));
-    else
-        mCmdMap.insert(std::pair<std::string, std::shared_ptr<Command>>(command,
-                                std::make_shared<Command>(command, param, fnCli)));
-}
-
-void CLI::removeCommand(const char* command)
-{
-    Lock lock(mLock);
-
-    auto it = mCmdMap.find(command);
-    if (it == mCmdMap.end())
-        return;
-
-    mCmdMap.erase(it);
 }
 

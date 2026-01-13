@@ -19,68 +19,22 @@
 
 #define CLI_SERVER_PORT  5555
 
-typedef void (*CLI_Func)(void* session, int argc, char** argv, void* param);
-
-#define CLI_OUT(fmt, args...)    do { \
-                                    TelnetSession* ts = (TelnetSession*)session; \
-                                    ts->print(fmt, ##args); \
-                                 } while (0)
-
 #define MAX_READ_LINE_LEN (2*1024)
 #define MAX_HISTORY_CNT   16
 
-class TelnetSession
+class ICliSession
 {
 public:
-    TelnetSession(TcpSession* session) : mSession(session) { };
-    ~TelnetSession() { };
+    virtual ~ICliSession() { }
 
-    void stop();
-
-    void print(const char* fmt, ...);
-    void printHistory();
-
-    char* getLine();
-
-    const char* searchHistory(int step);
-    void removeHistory();
-    void insertHistory(const char* cmd);
-
-    void processVKey(const VKey_t* vkey);
-
-    void doInsertChars(const char* charIn, int charInCnt);
-    void doErase(int eraseCnt);
-    void doDelete(int deleteCnt);
-    void doReturn();
-    void doMoveLeft();
-    void doMoveRight();
-    void doClearLine();
-
-    void reset();
-
-    void setCR(bool value);
-    bool isCR();
-
-protected:
-    bool mCR = false;
-    char mLine[MAX_READ_LINE_LEN];
-    int  mCharCnt = 0;
-    int  mCaretPos = 0;
-
-    char mCmdLines[MAX_HISTORY_CNT][MAX_READ_LINE_LEN];
-    int  mFirstHistory = 0;
-    int  mLastHistory  = MAX_HISTORY_CNT - 1;
-    int  mCountHistory = 0;
-    int  mStepHistory = -1;
-
-    TcpSession* mSession;
+    virtual void print(const char* fmt, ...) = 0;
 };
 
-inline void  TelnetSession::stop() { mSession->stop(); }
-inline char* TelnetSession::getLine() { return mLine; }
-inline void  TelnetSession::setCR(bool value) { mCR = value; }
-inline bool  TelnetSession::isCR() { return mCR; }
+typedef void (*CLI_Func)(ICliSession* session, int argc, char** argv, void* param);
 
+#define CLI_OUT(fmt, args...)    do { \
+                                    session->print(fmt, ##args); \
+                                 } while (0)
 
 class CLI : public ITcpSessionListener
 {
@@ -120,7 +74,7 @@ private:
             const std::string& cmd() { return mCommand; }
             const std::string& desc() { return mDesc; }
 
-            void execute(TelnetSession* session, int argc, char** argv)
+            void execute(ICliSession* session, int argc, char** argv)
             {
                 if(mFunc)
                     mFunc(session, argc, argv, mParam);
@@ -137,13 +91,13 @@ private:
 
     std::map<std::string, std::shared_ptr<Command>> mCmdMap;
 
-    static void cmd_clear(void* session, int argc, char** argv, void* param);
-    static void cmd_help(void* session, int argc, char** argv, void* param);
-    static void cmd_history(void* session, int argc, char** argv, void* param);
-    static void cmd_exit(void* session, int argc, char** argv, void* param);
+    static void cmd_clear(ICliSession* session, int argc, char** argv, void* param);
+    static void cmd_help(ICliSession* session, int argc, char** argv, void* param);
+    static void cmd_history(ICliSession* session, int argc, char** argv, void* param);
+    static void cmd_exit(ICliSession* session, int argc, char** argv, void* param);
 
     TcpServer mServer;
 };
 
 
-#endif //__GPIO_H_
+#endif // __CLI_H_
