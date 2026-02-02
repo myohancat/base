@@ -1364,7 +1364,7 @@ gboolean BluetoothManager::check_default_ctrl(void)
 
     return TRUE;
 }
-void BluetoothManager::cmd_bt_scan(void* session, int argc, char** argv, void* param)
+void BluetoothManager::cmd_bt_scan(ICliSession* session, int argc, char** argv, void* param)
 {
     UNUSED(session);
 
@@ -1377,7 +1377,7 @@ void BluetoothManager::cmd_bt_scan(void* session, int argc, char** argv, void* p
     pThis->scan(mode);
 }
 
-void BluetoothManager::cmd_bt_discoverable(void* session, int argc, char** argv, void* param)
+void BluetoothManager::cmd_bt_discoverable(ICliSession* session, int argc, char** argv, void* param)
 {
     UNUSED(session);
 
@@ -1391,7 +1391,7 @@ void BluetoothManager::cmd_bt_discoverable(void* session, int argc, char** argv,
 
 }
 
-void BluetoothManager::cmd_bt_pair(void* session, int argc, char** argv, void* param)
+void BluetoothManager::cmd_bt_pair(ICliSession* session, int argc, char** argv, void* param)
 {
     UNUSED(session);
 
@@ -1407,7 +1407,7 @@ void BluetoothManager::cmd_bt_pair(void* session, int argc, char** argv, void* p
     pThis->pair(dev);
 }
 
-void BluetoothManager::cmd_bt_trust(void* session, int argc, char** argv, void* param)
+void BluetoothManager::cmd_bt_trust(ICliSession* session, int argc, char** argv, void* param)
 {
     UNUSED(session);
 

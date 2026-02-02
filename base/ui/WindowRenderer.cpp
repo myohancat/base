@@ -68,19 +68,10 @@ WindowRenderer::WindowRenderer(Window* window)
     glGenTextures(1, &mTexture);
     glBindTexture(GL_TEXTURE_2D, mTexture);
 
-    if (window->getDmaBufFd() != -1)
-    {
-        mDmaBuf   = EGLHelper::create_dma_buf(DRM_FORMAT_ARGB8888, window->getWidth(), window->getHeight());
-        mEglImage = EGLHelper::create_egl_image(mDmaBuf, DRM_FORMAT_ARGB8888, window->getWidth(), window->getHeight());
-        glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, mEglImage);
-    }
-    else
-    {
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_BLUE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, GL_GREEN);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_RED);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_ALPHA);
-    }
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_BLUE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, GL_GREEN);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_RED);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_ALPHA);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -92,13 +83,6 @@ WindowRenderer::WindowRenderer(Window* window)
 
 WindowRenderer::~WindowRenderer()
 {
-    if (mEglImage != EGL_NO_IMAGE_KHR)
-    {
-        EGLHelper::destroy_egl_image(mEglImage);
-        mEglImage = EGL_NO_IMAGE_KHR;
-        SAFE_CLOSE(mDmaBuf);
-    }
-
     if(mTexture != (GLuint)-1)
         glDeleteTextures(1, &mTexture);
 
@@ -110,10 +94,6 @@ void WindowRenderer::setMVP(float* mvp)
     for (int ii = 0; ii < 16; ii++)
         mMVP[ii] = mvp[ii];
 }
-
-#include "rga/im2d.h"
-#include "rga/RgaUtils.h"
-#include "rga/RgaApi.h"
 
 void WindowRenderer::draw(void* pixels)
 {
@@ -137,17 +117,7 @@ void WindowRenderer::draw(void* pixels)
 
     if (pixels)
     {
-        if (mEglImage != EGL_NO_IMAGE_KHR)
-        {
-            EGLHelper::dma_buf_sync(mWindow->getDmaBufFd());
-
-            int aligned_w = ALIGN(mWindow->getWidth(), 16);
-            rga_buffer_t src = wrapbuffer_fd(mWindow->getDmaBufFd(), aligned_w, mWindow->getHeight(), RK_FORMAT_RGBA_8888);
-            rga_buffer_t dst = wrapbuffer_fd(mDmaBuf, aligned_w, mWindow->getHeight(), RK_FORMAT_RGBA_8888);
-            imcopy(src, dst);
-        }
-        else
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mWindow->getWidth(), mWindow->getHeight(), 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mWindow->getWidth(), mWindow->getHeight(), 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
     }
     setCrop(0, 0, mWindow->getWidth(), mWindow->getHeight());
 

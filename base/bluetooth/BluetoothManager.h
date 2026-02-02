@@ -16,6 +16,7 @@
 
 #include <glib.h>
 #include "gdbus/gdbus.h"
+#include "CLI.h"
 
 typedef enum
 {
@@ -186,10 +187,10 @@ private:
 
 private:
     // CLI
-    static void cmd_bt_scan(void* session, int argc, char** argv, void* param);
-    static void cmd_bt_discoverable(void* session, int argc, char** argv, void* param);
-    static void cmd_bt_pair(void* session, int argc, char** argv, void* param);
-    static void cmd_bt_trust(void* session, int argc, char** argv, void* param);
+    static void cmd_bt_scan(ICliSession* session, int argc, char** argv, void* param);
+    static void cmd_bt_discoverable(ICliSession* session, int argc, char** argv, void* param);
+    static void cmd_bt_pair(ICliSession* session, int argc, char** argv, void* param);
+    static void cmd_bt_trust(ICliSession* session, int argc, char** argv, void* param);
 
 private:
     ///////////// porting from bluetoothctl //////////////

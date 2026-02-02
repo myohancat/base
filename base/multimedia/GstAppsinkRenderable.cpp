@@ -98,13 +98,6 @@ void GstAppsinkRenderable::stopRenderer()
 
     destroyGstPipeline();
 
-    for (std::unordered_map<int,EGLImage>::iterator it = mFrameCache.begin(); it != mFrameCache.end() ; it++)
-    {
-        EGLImage image = it->second;
-        GstHelper::destroy_egl_image(image);
-    }
-    mFrameCache.clear();
-
     mIsRunning = false;
 }
 
@@ -175,19 +168,12 @@ void GstAppsinkRenderable::onDrawFrame()
             if (gst_is_dmabuf_memory(mem))
             {
                 int dmabuf_fd = gst_dmabuf_memory_get_fd(mem);
-                if (mFrameCache.find(dmabuf_fd) == mFrameCache.end())
-                {
-                    if (meta)
-                        image = GstHelper::create_egl_image_from_dmabuf(dmabuf_fd, meta);
-                    else
-                        image = GstHelper::create_egl_image_from_dmabuf(mem, format, width, height);
-
-                    mFrameCache[dmabuf_fd] = image;
-                }
+                if (meta)
+                    image = GstHelper::create_egl_image_from_dmabuf(dmabuf_fd, meta);
                 else
-                    image = mFrameCache[dmabuf_fd];
+                    image = GstHelper::create_egl_image_from_dmabuf(mem, format, width, height);
 
-                needToDestroy = false;
+                needToDestroy = true;
             }
         }
         else if (gst_caps_features_contains(gstCapsFeatures, "memory:GLMemory"))
@@ -219,7 +205,6 @@ void GstAppsinkRenderable::onDrawFrame()
             frame.mEglImg = image;
 
             mRenderer->draw(&frame);
-            //glFinish();
 
 #if defined(CONFIG_SOC_XAVIER_NX)
             if (gst_caps_features_contains(gstCapsFeatures, "memory:NVMM"))

@@ -342,7 +342,8 @@ bool GPIO::_exist(int num)
 bool GPIO::_exist(const std::string ioname)
 {
     char buf[MAX_PATH_LEN];
-	if (ioname.find(SYS_FS_DIR) == std::string::npos)
+
+    if (ioname.find(SYS_FS_DIR) == std::string::npos)
         snprintf(buf, MAX_PATH_LEN, SYS_FS_DIR "/%s", ioname.c_str());
     else
         snprintf(buf, MAX_PATH_LEN, "%s", ioname.c_str());

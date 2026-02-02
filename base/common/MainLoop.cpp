@@ -234,22 +234,23 @@ void MainLoop::post(const std::function<void()> &func)
 
 bool MainLoop::runFunctions()
 {
-	std::function<void()> func = nullptr;
-	{
-		Lock lock(mFunctionLock);
+    std::function<void()> func = nullptr;
+    {
+        Lock lock(mFunctionLock);
 
         if (!mFunctions.empty())
         {
             func = mFunctions.front();
             mFunctions.pop_front();
         }
-	}
+    }
 
-	if (func)
-	{
-		func();
-		return true;
-	}
+    if (func)
+    {
+        func();
+        return true;
+    }
+
     return false;
 }
 

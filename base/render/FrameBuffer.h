@@ -22,8 +22,10 @@ public:
     void bind();
     void unbind();
 
-    int  texture() const;
-    int  dmabuf() const;
+    int   texture() const;
+    int   dmabuf() const;
+    void* pixels() const;
+
 
 protected:
     void init();
@@ -41,6 +43,8 @@ private:
 
     EGLImage mEglImage;
     int      mDmaBufFD;
+    void*    mMmapPtr;
+    int      mMmapSize;
 };
 
 inline int FrameBuffer::texture() const
@@ -52,4 +56,10 @@ inline int FrameBuffer::dmabuf() const
 {
     return mDmaBufFD;
 }
+
+inline void* FrameBuffer::pixels() const
+{
+    return mMmapPtr;
+}
+
 #endif /* __FRAMEBUFFER_H_ */

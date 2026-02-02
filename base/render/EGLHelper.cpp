@@ -10,6 +10,7 @@
 
 #define USE_EGL_IMAGE_KHR
 
+#define HW_ALIGN_SIZE    64
 PFNGLEGLIMAGETARGETTEXTURE2DOESPROC glEGLImageTargetTexture2DOES = NULL;
 
 namespace EGLHelper
@@ -42,14 +43,14 @@ EGLImage create_egl_image(int dmabuf_fd, int format, int width, int height, EGLD
         case DRM_FORMAT_ABGR8888:
         case DRM_FORMAT_ARGB8888:
         {
-            int stride = ALIGN(width, 16) * 4;
+            int stride = ALIGN(width, HW_ALIGN_SIZE) * 4;
             n_planes = 1;
             strides[0] = stride;
             break;
         }
         case DRM_FORMAT_RGB888:
         {
-            int stride = ALIGN(width, 16) * 3;
+            int stride = ALIGN(width, HW_ALIGN_SIZE) * 3;
             n_planes = 1;
             strides[0] = stride;
             break;
@@ -58,7 +59,7 @@ EGLImage create_egl_image(int dmabuf_fd, int format, int width, int height, EGLD
         case DRM_FORMAT_NV16:
         case DRM_FORMAT_NV24:
         {
-            int stride = ALIGN(width, 16);
+            int stride = ALIGN(width, HW_ALIGN_SIZE);
             n_planes = 2;
             strides[0] = stride;
 
@@ -145,7 +146,8 @@ void destroy_egl_image(EGLImage image, EGLDisplay display)
 #include <linux/dma-buf.h>
 #include <sys/ioctl.h>
 
-int create_dma_buf(int format, int width, int height, bool continuous)
+
+int get_dma_buf_size(int format, int width, int height)
 {
     int stride, size;
 
@@ -154,33 +156,42 @@ int create_dma_buf(int format, int width, int height, bool continuous)
         case DRM_FORMAT_RGBA8888:
         case DRM_FORMAT_ABGR8888:
         case DRM_FORMAT_ARGB8888:
-            stride = ALIGN(width, 16) * 4;
+            stride = ALIGN(width, HW_ALIGN_SIZE) * 4;
             size = stride * height;
             break;
         case DRM_FORMAT_RGB888:
-            stride = ALIGN(width, 16) * 3;
+            stride = ALIGN(width, HW_ALIGN_SIZE) * 3;
             size = stride * height;
             break;
         case DRM_FORMAT_YUYV:
-            stride = ALIGN(width, 16);
+            stride = ALIGN(width, HW_ALIGN_SIZE);
             size   = stride * height * 2;
             break;
         case DRM_FORMAT_NV12:
-            stride = ALIGN(width, 16);
+            stride = ALIGN(width, HW_ALIGN_SIZE);
             size = stride * height * 3 / 2;
             break;
         case DRM_FORMAT_NV16:
-            stride = ALIGN(width, 16);
+            stride = ALIGN(width, HW_ALIGN_SIZE);
             size = stride * height * 2;
             break;
         case DRM_FORMAT_NV24:
-            stride = ALIGN(width, 16);
+            stride = ALIGN(width, HW_ALIGN_SIZE);
             size = stride * height * 3;
             break;
         default:
             LOGE("Unsupported format %x (%c%c%c%c)", format, format & 0xFF, (format >> 8) & 0xFF, (format >> 16) & 0xFF, (format >> 24) & 0xFF);
             return -1;
     }
+
+    return size;
+}
+
+int create_dma_buf(int format, int width, int height, bool continuous)
+{
+    int size = get_dma_buf_size(format, width, height);
+    if (size == -1)
+        return -1;
 
     return create_dma_buf(size, continuous);
 }
@@ -219,14 +230,18 @@ int create_dma_buf(int size, bool continuous)
     return alloc_data.fd;
 }
 
-void dma_buf_sync(int fd)
+void dma_buf_sync(int fd, bool needToWrite)
 {
     struct dma_buf_sync sync = {
         .flags = DMA_BUF_SYNC_START | DMA_BUF_SYNC_READ
     };
+    if (needToWrite) sync.flags |= DMA_BUF_SYNC_WRITE;
+
     ioctl(fd, DMA_BUF_IOCTL_SYNC, &sync);
 
     sync.flags = DMA_BUF_SYNC_END | DMA_BUF_SYNC_READ;
+    if (needToWrite) sync.flags |= DMA_BUF_SYNC_WRITE;
+
     ioctl(fd, DMA_BUF_IOCTL_SYNC, &sync);
 }
 

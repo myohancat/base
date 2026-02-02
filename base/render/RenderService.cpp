@@ -182,8 +182,6 @@ __TRACE__
 
                 if (fbos[index]->dmabuf() != -1)
                 {
-                    EGLHelper::dma_buf_sync(fbos[index]->dmabuf());
-
                     Lock lock(mRendererLock);
 
                     if (mOnDisplayRenderer)
@@ -230,7 +228,7 @@ static EGLDisplay _getDisplay()
     for (int i = 0; i < res->count_connectors; i++)
     {
         drmModeConnector* connector = drmModeGetConnector(rfd, res->connectors[i]);
-        CHECK("connector : %p, connector->connection : %d", connector, connector->connection);
+        //CHECK("connector : %p, connector->connection : %d", connector, connector->connection);
         drmModeFreeConnector(connector);
     }
 #endif

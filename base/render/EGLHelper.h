@@ -24,9 +24,11 @@ EGLImage create_egl_image(int dmabuf_fd, int format, int width, int height, EGLD
 void destroy_egl_image(EGLImage image, EGLDisplay display = nullptr);
 
 /* format : DRM_FORMAT... */
-int create_dma_buf(int format, int width, int height, bool continuous = false);
+int get_dma_buf_size(int format, int width, int height);
 int create_dma_buf(int size, bool continuous = false);
-void dma_buf_sync(int fd);
+int create_dma_buf(int format, int width, int height, bool continuous = false);
+
+void dma_buf_sync(int fd, bool needToWrite = false);
 
 } // namespace EGLHelper
 

@@ -38,8 +38,6 @@ protected:
     GLuint  mUniformMVP;
     GLuint  mUniformTexture;
 
-    EGLImage  mEglImage = EGL_NO_IMAGE_KHR;
-    int       mDmaBuf   = -1;
     Rectangle mRectCrop;
 
     float   mMVP[16];

@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/mman.h>
 
 #include "Log.h"
 #include "RenderService.h"
@@ -30,7 +31,11 @@ void FrameBuffer::init()
     glGenTextures(1, &mTexture);
     glBindTexture(GL_TEXTURE_2D, mTexture);
 
-    mDmaBufFD = EGLHelper::create_dma_buf(mFormat, mWidth, mHeight);
+    int size = EGLHelper::get_dma_buf_size(mFormat, mWidth, mHeight);
+    mDmaBufFD = EGLHelper::create_dma_buf(size);
+    mMmapPtr = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, mDmaBufFD, 0);
+    mMmapSize = size;
+
     mEglImage = EGLHelper::create_egl_image(mDmaBufFD, mFormat, mWidth, mHeight);
     glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, mEglImage);
 
@@ -59,6 +64,13 @@ void FrameBuffer::cleanup()
         EGLHelper::destroy_egl_image(mEglImage);
         mEglImage = EGL_NO_IMAGE_KHR;
     }
+
+    if (mMmapPtr)
+    {
+        munmap(mMmapPtr, mMmapSize);
+        mMmapPtr = NULL;
+    }
+
     if (mDmaBufFD)
         SAFE_CLOSE(mDmaBufFD);
 }

@@ -63,7 +63,6 @@ public:
 
     Size   getSize() const;
 
-    int    getDmaBufFd();
     void*  getPixels();
 
     void   lock();
@@ -79,9 +78,6 @@ protected:
     SkBlendMode convBlendMode(BlendMode_e eMode);
 
 protected:
-    int      mDmaBufFD = -1;
-    void*    mPixels   = NULL;
-
     std::shared_ptr<SkCanvas>  mCanvas;
     std::shared_ptr<SkBitmap>  mBitmap;
 

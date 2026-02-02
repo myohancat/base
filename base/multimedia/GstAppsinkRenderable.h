@@ -46,7 +46,6 @@ protected:
     virtual void requestUpdate();
 
 protected:
-    std::unordered_map<int, EGLImage> mFrameCache;
     EGLImageRenderer*  mRenderer;
 
 private:
@@ -64,7 +63,7 @@ private:
         protected:
             void dispose(GstSample* sample)
             {
-                //LOGD("Drop.");
+                LOGD("GstSample Drop.");
                 gst_sample_unref(sample);
             }
     };

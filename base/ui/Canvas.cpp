@@ -18,8 +18,6 @@
 #include <linux/dma-buf.h>
 #include <sys/ioctl.h>
 
-#define USE_DMABUF_FOR_CANVAS
-
 Canvas::Canvas()
        : mWidth(-1),
          mHeight(-1)
@@ -208,36 +206,9 @@ SkBlendMode Canvas::convBlendMode(BlendMode_e eMode)
 
 bool Canvas::init()
 {
-#ifdef USE_DMABUF_FOR_CANVAS
-    int stride = ALIGN(mWidth, 16) * 4;
-    mSize      = stride * mHeight;
-
-    mDmaBufFD = EGLHelper::create_dma_buf(DRM_FORMAT_RGBA8888, mWidth, mHeight);
-    if (mDmaBufFD == -1)
-        return false;
-
-    mPixels = mmap(nullptr, mSize, PROT_READ | PROT_WRITE, MAP_SHARED, mDmaBufFD, 0);
-    if (mPixels == MAP_FAILED)
-    {
-        LOGE("mmap failed");
-        SAFE_CLOSE(mDmaBufFD);
-        return false;
-    }
-
-    std::shared_ptr<SkBitmap> bitmap = std::make_shared<SkBitmap>();
-    SkImageInfo info = SkImageInfo::MakeN32(mWidth, mHeight, kPremul_SkAlphaType);
-    if (!bitmap->installPixels(info, mPixels, stride))
-    {
-        munmap(mPixels, mSize);
-        mPixels = NULL;
-        SAFE_CLOSE(mDmaBufFD);
-        return false;
-    }
-#else
     std::shared_ptr<SkBitmap> bitmap = std::make_shared<SkBitmap>();
     bitmap->setInfo(SkImageInfo::MakeN32(mWidth, mHeight, kPremul_SkAlphaType));
     bitmap->allocPixels();
-#endif
 
     std::shared_ptr<SkCanvas> canvas = std::make_shared<SkCanvas>(*bitmap);
     canvas->clear(0x00);
@@ -254,16 +225,6 @@ void Canvas::deinit()
 {
     mCanvas.reset();
     mBitmap.reset();
-
-    if (mPixels != NULL)
-        munmap(mPixels, mSize);
-
-    SAFE_CLOSE(mDmaBufFD);
-}
-
-int Canvas::getDmaBufFd()
-{
-    return mDmaBufFD;
 }
 
 void* Canvas::getPixels()

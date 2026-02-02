@@ -122,7 +122,6 @@ public:
     void onDrawFrame();
     void onSurfaceRemoved();
 
-    int   getDmaBufFd() const;
     void* getPixels() const;
 
 protected:
@@ -342,7 +341,6 @@ inline void Window::update(const Rectangle& rect)
     Lock lock(mUpdateLock);
 
     UNUSED(rect);
-
     mUpdate = true;
     if (RenderService::getInstance().getRenderMode() == RENDER_MODE_WHEN_DIRTY)
         RenderService::getInstance().update();
@@ -351,15 +349,6 @@ inline void Window::update(const Rectangle& rect)
 inline bool Window::isFocused() const
 {
     return mVisible && !mHiding && mFocused;
-}
-
-inline int Window::getDmaBufFd() const
-{
-    Canvas* canvas = getCanvas();
-    if(!canvas)
-        return -1;
-
-    return canvas->getDmaBufFd();
 }
 
 inline void* Window::getPixels() const

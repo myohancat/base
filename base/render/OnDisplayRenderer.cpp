@@ -180,6 +180,7 @@ __TRACE__
 
     for (auto &kv : mImageCache)
         eglDestroyImageKHR(mDisplay, kv.second);
+
     mImageCache.clear();
 }
 
@@ -265,6 +266,6 @@ void OnDisplayRenderer::update(int dmafd, int format, int width, int height)
     UNUSED(width);
     UNUSED(height);
 
-    mMsgQ.put(DmaBufImage(dmafd, format, width, height));
+    mMsgQ.putForce(DmaBufImage(dmafd, format, width, height));
 }
 
