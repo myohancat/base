@@ -118,8 +118,8 @@ void MsgQ::flush()
 
     mQueue.clear();
 
-    mCvFull.signal();
-    mCvEmpty.signal();
+    mCvFull.broadcast();
+    mCvEmpty.broadcast();
 }
 
 void MsgQ::setEOS(bool eos)
@@ -127,6 +127,6 @@ void MsgQ::setEOS(bool eos)
     Lock lock(mLock);
     mEOS = eos;
 
-    mCvFull.signal();
-    mCvEmpty.signal();
+    mCvFull.broadcast();
+    mCvEmpty.broadcast();
 }

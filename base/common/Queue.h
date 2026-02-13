@@ -118,8 +118,8 @@ public:
         mRear = 0;
         mFront = 0;
 
-        mCvFull.signal();
-        mCvEmpty.signal();
+        mCvFull.broadcast();
+        mCvEmpty.broadcast();
     }
 
     void setEOS(bool eos)
@@ -127,8 +127,8 @@ public:
         Lock lock(mLock);
         mEOS = eos;
 
-        mCvFull.signal();
-        mCvEmpty.signal();
+        mCvFull.broadcast();
+        mCvEmpty.broadcast();
     }
 
     size_t  size();
