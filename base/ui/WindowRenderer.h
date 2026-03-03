@@ -39,8 +39,8 @@ protected:
     GLuint  mUniformMVP;
     GLuint  mUniformTexture;
 
-    EGLImage  mEglImage = EGL_NO_IMAGE_KHR;
-    Rectangle mRectCrop;
+    EGLImageKHR mEglImage = EGL_NO_IMAGE_KHR;
+    Rectangle   mRectCrop;
 
     float   mMVP[16];
     float   mTexCoords[8];

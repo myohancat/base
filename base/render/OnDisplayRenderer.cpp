@@ -132,7 +132,7 @@ __TRACE__
         if (!mMsgQ.get(&image, -1))
             continue;
 
-        EGLImage eglImage = NULL;
+        EGLImageKHR eglImage = EGL_NO_IMAGE_KHR;
         if (image.mDmaFD != -1)
         {
             if (mImageCache.find(image.mDmaFD) == mImageCache.end())

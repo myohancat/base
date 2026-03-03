@@ -160,7 +160,7 @@ void GstAppsinkRenderable::onDrawFrame()
         //LOGT("%s, %s, %dx%d", gst_caps_features_to_string (gstCapsFeatures), format, width, height);
 
         /* Get eglImage */
-        EGLImageKHR image = NULL;
+        EGLImageKHR image = EGL_NO_IMAGE_KHR;
         if (gst_caps_features_contains(gstCapsFeatures, "memory:DMABuf")
          || gst_caps_features_contains(gstCapsFeatures, "memory:SystemMemory"))
         {
@@ -185,7 +185,7 @@ void GstAppsinkRenderable::onDrawFrame()
         {
             NvBufSurface* surf = (NvBufSurface*)map.data;
             image = surf->surfaceList[0].mappedAddr.eglImage;
-            if (image == NULL)
+            if (image == EGL_NO_IMAGE_KHR)
             {
                 NvBufSurfaceMapEglImage(surf, 0);
                 image = surf->surfaceList->mappedAddr.eglImage;

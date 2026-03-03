@@ -37,10 +37,10 @@ private:
 
     GLint    mPreviousFramebuffer;
 
-    EGLImage mEglImage;
-    int      mDmaBufFD;
-    void*    mMmapPtr;
-    int      mMmapSize;
+    EGLImageKHR mEglImage;
+    int         mDmaBufFD;
+    void*       mMmapPtr;
+    int         mMmapSize;
 };
 
 inline int FrameBuffer::texture() const
