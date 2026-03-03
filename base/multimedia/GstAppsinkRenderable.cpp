@@ -7,7 +7,6 @@
 
 #include "Log.h"
 #include "RenderService.h"
-
 #include "GstHelper.h"
 
 #include <sstream>
@@ -161,7 +160,7 @@ void GstAppsinkRenderable::onDrawFrame()
         //LOGT("%s, %s, %dx%d", gst_caps_features_to_string (gstCapsFeatures), format, width, height);
 
         /* Get eglImage */
-        EGLImage image = NULL;
+        EGLImageKHR image = NULL;
         if (gst_caps_features_contains(gstCapsFeatures, "memory:DMABuf")
          || gst_caps_features_contains(gstCapsFeatures, "memory:SystemMemory"))
         {

@@ -6,9 +6,10 @@
 #ifndef __WINDOW_RENDERER_H_
 #define __WINDOW_RENDERER_H_
 
+#include "EGLHelper.h"
+
 #include "Mutex.h"
 #include "Rectangle.h"
-#include "EGLHelper.h"
 #include <errno.h>
 
 class Window;
@@ -38,6 +39,7 @@ protected:
     GLuint  mUniformMVP;
     GLuint  mUniformTexture;
 
+    EGLImage  mEglImage = EGL_NO_IMAGE_KHR;
     Rectangle mRectCrop;
 
     float   mMVP[16];

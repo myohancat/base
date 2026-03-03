@@ -6,10 +6,6 @@
 #ifndef __FRAMEBUFFER_H_
 #define __FRAMEBUFFER_H_
 
-#include <GLES2/gl2.h>
-#include <EGL/egl.h>
-#include <EGL/eglext.h>
-
 #include "EGLHelper.h"
 
 class FrameBuffer

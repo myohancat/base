@@ -8,10 +8,9 @@
 
 #include "ShaderUtil.h"
 #include "RenderService.h"
-#include <vector>
-#include <GLES2/gl2ext.h>
-
 #include "Log.h"
+
+#include <vector>
 
 static char VERTEX_SHADER_SRC[] =
     "#version 300 es\n"

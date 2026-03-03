@@ -7,13 +7,11 @@
 #ifndef __RAW_NV12_RENDERER_H_
 #define __RAW_NV12_RENDERER_H_
 
-#include "Mutex.h"
-#include <EGL/egl.h>
-#include <EGL/eglext.h>
-#include <GLES2/gl2.h>
-#include <errno.h>
-
+#include "EGLHelper.h"
 #include "Renderer.h"
+#include "Mutex.h"
+
+#include <errno.h>
 
 class RawNV12Renderer
 {

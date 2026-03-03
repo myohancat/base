@@ -237,6 +237,7 @@ UsbStorageManager::UsbStorageManager()
 UsbStorageManager::~UsbStorageManager()
 {
     stop();
+    umount_all();
 }
 
 bool UsbStorageManager::addListener(IUsbStorageListener* listener)

@@ -7,10 +7,10 @@
 #include "EGLImageRenderer.h"
 
 #include "ShaderUtil.h"
-#include <vector>
-#include "EGLHelper.h"
 #include "RenderService.h"
 #include "Log.h"
+
+#include <vector>
 
 static char VERTEX_SHADER_SRC[] = R"(#version 300 es
 layout(location = 0) in vec3 a_Position;

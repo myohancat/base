@@ -568,7 +568,6 @@ NativeWindowType DrmPlatform::getWindow()
     return (NativeWindowType)mSurface;
 }
 
-#include <EGL/eglext.h>
 static PFNEGLGETPLATFORMDISPLAYEXTPROC _eglGetPlatformDisplayEXT = NULL;
 
 EGLDisplay DrmPlatform::getEGLDisplay()

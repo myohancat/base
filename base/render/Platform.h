@@ -7,8 +7,7 @@
 #define __PLATFORM_H_
 
 #include "Types.h"
-#include <EGL/egl.h>
-#include <EGL/eglplatform.h>
+#include "EGLHelper.h"
 
 class IPlatform
 {

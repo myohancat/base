@@ -7,9 +7,6 @@
 
 #include "MainLoop.h"
 
-#include <GLES2/gl2.h>
-#include <GLES2/gl2ext.h>
-#include <EGL/eglext.h>
 #include <algorithm>
 #include <unistd.h>
 #include "ShaderUtil.h"
@@ -206,7 +203,6 @@ __TRACE__
     }
 }
 
-#include <EGL/eglext.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -447,5 +443,17 @@ void RenderService::update(bool forceToDraw)
 
 void RenderService::deinitEGL()
 {
-    // TODO
+    if (mDisplay == EGL_NO_DISPLAY)
+        return;
+
+    eglMakeCurrent(mDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+
+    if (mContext != EGL_NO_CONTEXT)
+    {
+        eglDestroyContext(mDisplay, mContext);
+        mContext = EGL_NO_CONTEXT;
+    }
+
+    eglTerminate(mDisplay);
+    mDisplay = EGL_NO_DISPLAY;
 }

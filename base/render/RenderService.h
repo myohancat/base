@@ -8,12 +8,10 @@
 
 #include <stdint.h>
 
-#include <EGL/egl.h>
-#include <EGL/eglplatform.h>
-#include <GLES3/gl3.h>
-
 #include <memory>
 #include <list>
+
+#include "EGLHelper.h"
 
 #include "Task.h"
 #include "MsgQ.h"
@@ -109,9 +107,8 @@ private:
 private:
     OnDisplayRenderer* mOnDisplayRenderer = nullptr;
 
-    EGLDisplay   mDisplay;
-    EGLContext   mContext;
-    EGLSurface   mSurface;
+    EGLDisplay   mDisplay = EGL_NO_DISPLAY;
+    EGLContext   mContext = EGL_NO_CONTEXT;
 
     int          mRealScreenWidth;
     int          mRealScreenHeight;

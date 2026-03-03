@@ -4,14 +4,14 @@
  * Author: Kyungyin.Kim < myohancat@naver.com >
  */
 #include "FrameBuffer.h"
+
+#include "RenderService.h"
+#include "Log.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/mman.h>
-
-#include "Log.h"
-#include "RenderService.h"
-#include "EGLHelper.h"
 
 FrameBuffer::FrameBuffer(int format, int width, int height)
            : mFormat(format), mWidth(width), mHeight(height),

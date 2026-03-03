@@ -9,11 +9,11 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include <GLES2/gl2.h>
 #include <algorithm>
 
 #include <sys/types.h>
 #include <dirent.h>
+
 static const char* get_wayland_display(const char* path)
 {
     static char wayland_display[1024];

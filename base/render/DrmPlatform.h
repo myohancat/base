@@ -11,14 +11,13 @@
 #include "MsgQ.h"
 #include "CondVar.h"
 
-#include <memory>
-
-#include <EGL/egl.h>
-#include <EGL/eglplatform.h>
+#include "EGLHelper.h"
 
 #include <gbm.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
+
+#include <memory>
 
 #define USE_SYNC_FLIP /* It cause hangup in 60FPS */
 //#define FLIP_CALL_DIRECTLY

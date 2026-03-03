@@ -12,7 +12,7 @@ CFLAGS     += -fPIC -Wno-unused-function -Wno-unused-result
 LDFLAGS    += -lpthread -ldl
 
 OUT_DIR    := out
-TARGET     := Recorder
+TARGET     := Test
 
 INCDIRS    :=
 SRCDIRS    :=

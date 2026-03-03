@@ -12,8 +12,7 @@
 
 #include <memory>
 
-#include <EGL/egl.h>
-#include <EGL/eglplatform.h>
+#include "EGLHelper.h"
 
 #include <wayland-client.h>
 #include <wayland-server.h>

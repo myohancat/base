@@ -122,6 +122,7 @@ public:
     void onDrawFrame();
     void onSurfaceRemoved();
 
+    int   getDmaBufFd() const;
     void* getPixels() const;
 
 protected:
@@ -349,6 +350,15 @@ inline void Window::update(const Rectangle& rect)
 inline bool Window::isFocused() const
 {
     return mVisible && !mHiding && mFocused;
+}
+
+inline int Window::getDmaBufFd() const
+{
+    Canvas* canvas = getCanvas();
+    if(!canvas)
+        return -1;
+
+    return canvas->getDmaBufFd();
 }
 
 inline void* Window::getPixels() const

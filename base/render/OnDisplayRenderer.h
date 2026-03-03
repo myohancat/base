@@ -8,9 +8,7 @@
 
 #include <stdint.h>
 
-#include <EGL/egl.h>
-#include <EGL/eglplatform.h>
-#include <GLES3/gl3.h>
+#include "EGLHelper.h"
 
 #include "Task.h"
 #include "Queue.h"

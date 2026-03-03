@@ -6,7 +6,7 @@
 #ifndef __SHADER_UTIL_H_
 #define __SHADER_UTIL_H_
 
-#include <GLES3/gl3.h>
+#include "EGLHelper.h"
 
 namespace ShaderUtil
 {
