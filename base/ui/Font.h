@@ -14,6 +14,10 @@
 class Font
 {
 public:
+    /* Test Font only supports ASCII */
+    static Font DEF_FONT_24;
+    static Font DEF_FONT_32;
+    static Font DEF_FONT_56;
 
     enum FontStyle_e
     {
@@ -24,6 +28,7 @@ public:
 
     Font(const std::string& path, int size);
     Font(const std::string& path, int size, FontStyle_e style);
+    Font(const void* data, size_t length, int size);
     Font(const Font& font);
 
     ~Font();

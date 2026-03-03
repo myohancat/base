@@ -8,6 +8,12 @@
 #include "Log.h"
 
 #include <SkTypeface.h>
+#include <SkData.h>
+
+#include "roboto_regular_mini.h"
+Font Font::DEF_FONT_24(RobotoRegular_tiny_ttf, RobotoRegular_tiny_ttf_len, 24);
+Font Font::DEF_FONT_32(RobotoRegular_tiny_ttf, RobotoRegular_tiny_ttf_len, 32);
+Font Font::DEF_FONT_56(RobotoRegular_tiny_ttf, RobotoRegular_tiny_ttf_len, 56);
 
 Font::Font(const std::string& path, int size)
      : mPath(path),
@@ -24,6 +30,18 @@ Font::Font(const std::string& path, int size, FontStyle_e style)
        mStyle(style)
 {
     loadFont();
+}
+
+Font::Font(const void* data, size_t length, int size)
+    : mPath("memory"),
+      mSize(size),
+      mStyle(FONT_STYLE_PLAIN)
+{
+    auto skData = SkData::MakeWithCopy(data, length);
+    if (skData)
+        mFont = std::make_shared<SkFont>(SkTypeface::MakeFromData(skData), mSize);
+    else
+        LOGE("Failed to load font from memory");
 }
 
 Font::Font(const Font& font)
