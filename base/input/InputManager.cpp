@@ -300,6 +300,7 @@ void InputManager::removeInputDevice(const std::string& devpath)
         if(*device == devpath)
         {
             LOGD("---> remove device : %s", devpath.c_str());
+            delete device;
             mInputDevices.erase(it);
             return;
         }
