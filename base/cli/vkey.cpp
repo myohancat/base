@@ -18,7 +18,7 @@
 #define INIT_VKEY(sVKey)    do{                                 \
                                 sVKey.mCode  = VKEY_CODE_UNKNOWN; \
                                 sVKey.mValue = ' ';             \
-                            }while(0)
+                            }while (0)
 
 typedef struct KeyBind_s
 {
@@ -97,13 +97,13 @@ static int _ReadKey(int nFd, char* pKey)
     ret = poll(&sPollFd, 1, TIMEOUT);
     if (ret > 0)
     {
-        if(sPollFd.revents & (POLLRDHUP | POLLERR | POLLHUP | POLLNVAL))
+        if (sPollFd.revents & (POLLRDHUP | POLLERR | POLLHUP | POLLNVAL))
             return -1;
 
         if (sPollFd.revents & POLLIN)
         {
             nReadChar = read(nFd, pKey, 1);
-            if(nReadChar < 1)
+            if (nReadChar < 1)
                 return -1;
         }
     }
@@ -120,9 +120,9 @@ static int _GetVKeyFromASCII(VKey_t* pVKey, char cIn)
 {
     unsigned int ii;
 
-    for(ii = 0; ii < sizeof(CONV_TABLE_ASCII)/sizeof(KeyBind_t); ii++)
+    for (ii = 0; ii < sizeof(CONV_TABLE_ASCII)/sizeof(KeyBind_t); ii++)
     {
-        if(CONV_TABLE_ASCII[ii].mString[0] == cIn)
+        if (CONV_TABLE_ASCII[ii].mString[0] == cIn)
         {
             pVKey->mCode  = CONV_TABLE_ASCII[ii].mCode;
             pVKey->mValue = ' ';
@@ -157,9 +157,9 @@ static int _GetVKeyFromEscSeq(int nFd, VKey_t* pVKey)
             return 1;
         }
 
-    }while(cIn == ASCII_ESC);
+    }while (cIn == ASCII_ESC);
 
-    if(cIn != '[' && cIn != 'O')
+    if (cIn != '[' && cIn != 'O')
     {
         pVKey->mCode  = VKEY_CODE_CHAR;
         pVKey->mValue = cIn;
@@ -170,7 +170,7 @@ static int _GetVKeyFromEscSeq(int nFd, VKey_t* pVKey)
     abEscSeqBuf[nIdx++] = cIn;
     abEscSeqBuf[nIdx]   = '\0';
 
-    while(nIdx < 7)
+    while (nIdx < 7)
     {
         unsigned int ii;
         ret = _ReadKey(nFd, &cIn);
@@ -181,14 +181,14 @@ static int _GetVKeyFromEscSeq(int nFd, VKey_t* pVKey)
         abEscSeqBuf[nIdx]   = '\0';
 
 #if 0
-        for(ii = 0; ii < (unsigned int)nIdx; ii++)
+        for (ii = 0; ii < (unsigned int)nIdx; ii++)
             printf("0x%02x, ", abEscSeqBuf[ii]);
         printf("\n");
 #endif
 
-        for(ii = 0; ii < sizeof(CONV_TABLE_ESC_SEQ)/sizeof(KeyBind_t); ii++)
+        for (ii = 0; ii < sizeof(CONV_TABLE_ESC_SEQ)/sizeof(KeyBind_t); ii++)
         {
-            if(!strcmp((char *)abEscSeqBuf, (char *)CONV_TABLE_ESC_SEQ[ii].mString))
+            if (!strcmp((char *)abEscSeqBuf, (char *)CONV_TABLE_ESC_SEQ[ii].mString))
             {
                 pVKey->mCode  = CONV_TABLE_ESC_SEQ[ii].mCode;
                 pVKey->mValue = ' ';
@@ -208,17 +208,17 @@ int ReadVKey(int nFd, VKey_t* pVKey)
     int       ret;
 
     ret = _ReadKey(nFd, &cIn);
-    if(ret <= 0)
+    if (ret <= 0)
         return ret;
 
     INIT_VKEY((*pVKey));
 
-    if(isprint(cIn))
+    if (isprint(cIn))
     {
         pVKey->mCode  = VKEY_CODE_CHAR;
         pVKey->mValue = cIn;
     }
-    else if(cIn != ASCII_ESC)
+    else if (cIn != ASCII_ESC)
     {
         ret = _GetVKeyFromASCII(pVKey, cIn);
         if (ret <= 0)

@@ -234,7 +234,7 @@ inline int Window::getHeight() const
 inline void Window::drawText(const Font& font, const std::string& text, int x, int y, const Color& color, Rectangle* res)
 {
     Canvas* canvas = getCanvas();
-    if(!canvas)
+    if (!canvas)
         return;
 
     Lock lock(canvas);
@@ -244,7 +244,7 @@ inline void Window::drawText(const Font& font, const std::string& text, int x, i
 inline void Window::drawImage(Image* image, int x, int y, Rectangle* res)
 {
     Canvas* canvas = getCanvas();
-    if(!canvas)
+    if (!canvas)
         return;
 
     Lock lock(canvas);
@@ -254,7 +254,7 @@ inline void Window::drawImage(Image* image, int x, int y, Rectangle* res)
 inline void Window::drawImageStretch(Image* image, Rectangle& dest, Rectangle* res)
 {
     Canvas* canvas = getCanvas();
-    if(!canvas)
+    if (!canvas)
         return;
 
     Lock lock(canvas);
@@ -265,7 +265,7 @@ inline void Window::drawImageStretch(Image* image, Rectangle& dest, Rectangle* r
 inline void Window::drawImageStretchFixed(Image* image, Rectangle& dest, Rectangle* res)
 {
     Canvas* canvas = getCanvas();
-    if(!canvas)
+    if (!canvas)
         return;
 
     Lock lock(canvas);
@@ -276,7 +276,7 @@ inline void Window::drawImageStretchFixed(Image* image, Rectangle& dest, Rectang
 inline void Window::drawRectangle(const Rectangle& rect, const Color& color)
 {
     Canvas* canvas = getCanvas();
-    if(!canvas)
+    if (!canvas)
         return;
 
     Lock lock(canvas);
@@ -286,7 +286,7 @@ inline void Window::drawRectangle(const Rectangle& rect, const Color& color)
 inline void Window::drawLine(const Point& p0, const Point& p1, const Color& color, float stokeWidth)
 {
     Canvas* canvas = getCanvas();
-    if(!canvas)
+    if (!canvas)
         return;
 
     Lock lock(canvas);
@@ -296,7 +296,7 @@ inline void Window::drawLine(const Point& p0, const Point& p1, const Color& colo
 inline void Window::drawCircle(const Point& center, int radius, const Color& color)
 {
     Canvas* canvas = getCanvas();
-    if(!canvas)
+    if (!canvas)
         return;
 
     Lock lock(canvas);
@@ -306,7 +306,7 @@ inline void Window::drawCircle(const Point& center, int radius, const Color& col
 inline void Window::clear()
 {
     Canvas* canvas = getCanvas();
-    if(!canvas)
+    if (!canvas)
         return;
 
     Lock lock(canvas);
@@ -316,7 +316,7 @@ inline void Window::clear()
 inline void Window::clear(const Rectangle& rect)
 {
     Canvas* canvas = getCanvas();
-    if(!canvas)
+    if (!canvas)
         return;
 
     Lock lock(canvas);
@@ -355,7 +355,7 @@ inline bool Window::isFocused() const
 inline int Window::getDmaBufFd() const
 {
     Canvas* canvas = getCanvas();
-    if(!canvas)
+    if (!canvas)
         return -1;
 
     return canvas->getDmaBufFd();
@@ -364,7 +364,7 @@ inline int Window::getDmaBufFd() const
 inline void* Window::getPixels() const
 {
     Canvas* canvas = getCanvas();
-    if(!canvas)
+    if (!canvas)
         return NULL;
 
     return canvas->getPixels();

@@ -29,13 +29,13 @@ void Timer::setHandler(ITimerHandler* handler)
 
 void Timer::start(uint32_t msec, bool repeat)
 {
-    if(mRunning)
+    if (mRunning)
         return;
 
     mInterval = msec;
     mRepeat   = repeat;
 
-    if(mInterval != TIMER_INFINITE)
+    if (mInterval != TIMER_INFINITE)
         mExpiry = SysTime::getTickCountMs() + mInterval;
     else
         mExpiry = (uint64_t)(-1);
@@ -47,7 +47,7 @@ void Timer::start(uint32_t msec, bool repeat)
 
 void Timer::restart()
 {
-    if(mRunning)
+    if (mRunning)
         stop();
 
     start(mInterval, mRepeat);
@@ -75,10 +75,10 @@ bool Timer::execute()
 #if 0 /* TODO */
     uint64_t expiry = SysTime::getTickCount() + mInterval;
 #endif
-    if(mHandler != NULL)
+    if (mHandler != NULL)
         mHandler->onTimerExpired(this);
 
-    if(mRepeat)
+    if (mRepeat)
         mExpiry = mExpiry + mInterval;
     else
         mRunning = false;

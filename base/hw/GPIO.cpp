@@ -168,7 +168,7 @@ bool GPIO::getValue()
     bool value = false;
     if ((len = read(fd, buf, sizeof(buf))) > 0) {
         buf[len] = 0;
-        if(strncmp(buf, "0", 1) == 0)
+        if (strncmp(buf, "0", 1) == 0)
             value = false;
         else
             value = true;
@@ -257,7 +257,7 @@ bool GPIO::isActiveLow()
     bool value = false;
     if ((len = read(fd, buf, sizeof(buf))) > 0) {
         buf[len] = 0;
-        if(strcmp(buf, "0") == 0)
+        if (strcmp(buf, "0") == 0)
             value = false;
         else
             value = true;

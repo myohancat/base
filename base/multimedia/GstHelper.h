@@ -8,12 +8,9 @@
 
 #include "EGLHelper.h"
 
+#include <gst/video/video.h>
 #include <gst/video/gstvideometa.h>
 #include <gst/allocators/gstdmabuf.h>
-
-#include <gst/gl/gl.h>
-#include <gst/gl/gstglfuncs.h>
-#include <gst/gl/egl/gstglmemoryegl.h>
 
 namespace GstHelper
 {
@@ -21,8 +18,9 @@ namespace GstHelper
 
 void initialize();
 
-EGLImageKHR create_egl_image_from_dmabuf(GstMemory* mem, const char* format, int width, int height);
+EGLImageKHR create_egl_image_from_dmabuf(int dmabuf_fd, GstVideoInfo* info);
 EGLImageKHR create_egl_image_from_dmabuf(int dmabuf_fd, GstVideoMeta* meta);
+EGLImageKHR create_egl_image_from_dmabuf(GstMemory* mem, const char* format, int width, int height);
 
 void destroy_egl_image(EGLImageKHR image);
 

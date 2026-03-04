@@ -102,12 +102,12 @@ Window::Window(int zOrder, int width, int height, float alpha)
     mX = (getScreenWidth() - width) / 2;
     mY = (getScreenHeight()- height) / 2;
 
-    if(width < 0)
+    if (width < 0)
         mWidth = getScreenWidth();
     else
         mWidth = width;
 
-    if(height < 0)
+    if (height < 0)
         mHeight= getScreenHeight();
     else
         mHeight = height;
@@ -128,12 +128,12 @@ Window::Window(int zOrder, int x, int y, int width, int height, float alpha)
             mBgImg(NULL),
             mBgColor(NULL)
 {
-    if(width < 0)
+    if (width < 0)
         mWidth = getScreenWidth();
     else
         mWidth = width;
 
-    if(height < 0)
+    if (height < 0)
         mHeight= getScreenHeight();
     else
         mHeight = height;
@@ -202,7 +202,7 @@ void Window::addWidget(IWidget* widget)
         return;
 
     WidgetList::iterator it = std::find(mWidgetList.begin(), mWidgetList.end(), widget);
-    if(it != mWidgetList.end())
+    if (it != mWidgetList.end())
         return;
 
     widget->setWindow(this);
@@ -214,9 +214,9 @@ void Window::removeWidget(IWidget* widget)
     if (widget == NULL)
         return;
 
-    for(WidgetList::iterator it = mWidgetList.begin(); it != mWidgetList.end(); it++)
+    for (WidgetList::iterator it = mWidgetList.begin(); it != mWidgetList.end(); it++)
     {
-        if(widget == *it)
+        if (widget == *it)
         {
             mWidgetList.erase(it);
             (*it)->setWindow(NULL);
@@ -227,7 +227,7 @@ void Window::removeWidget(IWidget* widget)
 
 void Window::redrawWidgets()
 {
-    for(WidgetList::iterator it = mWidgetList.begin(); it != mWidgetList.end(); it++)
+    for (WidgetList::iterator it = mWidgetList.begin(); it != mWidgetList.end(); it++)
         (*it)->paint();
 }
 
@@ -277,9 +277,9 @@ void Window::_show(bool disableAni)
     }
 
     // Lazy Creation
-    if(!getCanvas())
+    if (!getCanvas())
     {
-        if(mWidth > 0 && mHeight > 0)
+        if (mWidth > 0 && mHeight > 0)
         {
             mCanvas = new Canvas(mWidth, mHeight);
             mCanvas->lock();
@@ -303,11 +303,11 @@ void Window::_show(bool disableAni)
     if (ani)
         ani->start();
 
-    if(mWindowListener)
+    if (mWindowListener)
         mWindowListener->onShow(this);
 
 #if 1
-    for(WidgetList::iterator it = mWidgetList.begin(); it != mWidgetList.end(); it++)
+    for (WidgetList::iterator it = mWidgetList.begin(); it != mWidgetList.end(); it++)
         (*it)->paint();
 #endif
 
@@ -334,7 +334,7 @@ void Window::_hide(bool disableAni)
         ani->setListener(this);
         ani->start();
     }
-    if(mWindowListener)
+    if (mWindowListener)
         mWindowListener->onHide(this);
 
     if (!ani)
@@ -387,16 +387,16 @@ void Window::redrawBackground(const Rectangle& rect, bool isUpdate)
 
     Lock lock(canvas);
 
-    if(!rect.isValid())
+    if (!rect.isValid())
         return;
 
     canvas->clear(rect);
-    if(mBgImg)
+    if (mBgImg)
     {
         Image imgToRedraw(*mBgImg, rect);
         canvas->drawImage(&imgToRedraw, rect.getX(), rect.getY());
     }
-    else if(mBgColor)
+    else if (mBgColor)
     {
         canvas->drawRectangle(rect, *mBgColor);
     }

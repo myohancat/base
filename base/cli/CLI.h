@@ -76,7 +76,7 @@ private:
 
             void execute(ICliSession* session, int argc, char** argv)
             {
-                if(mFunc)
+                if (mFunc)
                     mFunc(session, argc, argv, mParam);
             }
 

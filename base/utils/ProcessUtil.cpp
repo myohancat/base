@@ -26,9 +26,9 @@ static void close_all_fds()
     int ii = 0;
     int flags =0;
 
-    for(ii = 3; ii <= getdtablesize(); ii++)
+    for (ii = 3; ii <= getdtablesize(); ii++)
     {
-        if((flags = fcntl(ii, F_GETFD)) != -1)
+        if ((flags = fcntl(ii, F_GETFD)) != -1)
         {
             fcntl(ii, F_SETFD, flags | FD_CLOEXEC);
         }
@@ -52,9 +52,9 @@ int get_pid(const char* process)
     FILE *pFP = NULL;
 
     snprintf(szCmd, sizeof(szCmd), "pidof %s", process);
-    if((pFP = ::popen(szCmd, "r")) != NULL)
+    if ((pFP = ::popen(szCmd, "r")) != NULL)
     {
-        if(fgets(szPid, sizeof(szPid), pFP) != NULL)
+        if (fgets(szPid, sizeof(szPid), pFP) != NULL)
         {
             nPid = atoi(szPid);
         }
@@ -119,7 +119,7 @@ int kill(const char* process)
 {
     int pid = get_pid(process);
 
-    if(pid < 0)
+    if (pid < 0)
     {
         LOGE("cannot found %s : pid %d", process, pid);
         return -1;
@@ -133,7 +133,7 @@ int kill(const char* process)
 int kill_force(const char* process)
 {
     int pid = get_pid(process);
-    if(pid < 0)
+    if (pid < 0)
     {
         LOGE("cannot found %s : pid %d", process, pid);
         return -1;
@@ -146,9 +146,10 @@ int kill_force(const char* process)
 
 static bool _is_exist_process(int pid)
 {
-    char path[1024];
-    sprintf(path, "/proc/%d", pid);
-    if (::access(path, F_OK) == 0)
+    if (kill(pid, 0) == 0)
+        return true;
+
+    if (errno == EPERM)
         return true;
 
     return false;
@@ -189,13 +190,13 @@ int system(const char* command)
     close_all_fds();
 
     pid = fork();
-    if(pid < (pid_t)0)
+    if (pid < (pid_t)0)
     {
         LOGE("Fork is failed !");
         return -1;
     }
 
-    if(pid == (pid_t)0) // CHILD
+    if (pid == (pid_t)0) // CHILD
     {
         const char* new_argv[4];
         new_argv[0] = "sh";
@@ -214,8 +215,8 @@ int system(const char* command)
         do
         {
             ret = waitpid(pid, &status, 0);
-        }while(ret == (pid_t)-1 && errno == EINTR);
-        if(ret != pid)
+        }while (ret == (pid_t)-1 && errno == EINTR);
+        if (ret != pid)
         {
             LOGE("Wait PID is failed !");
             status = -1;
@@ -239,11 +240,11 @@ static char** make_args(const char* command)
     strncpy(buf, command, MAX_CMDLINE -1);
     buf[MAX_CMDLINE -1] = 0;
 
-    while(*p)
+    while (*p)
     {
         if (!start)
         {
-            while(IS_SPACE(*p)) p++;
+            while (IS_SPACE(*p)) p++;
             if (*p == 0) break;
             start = p;
         }
@@ -251,13 +252,13 @@ static char** make_args(const char* command)
         {
             if (!IS_QUOTE(*start))
             {
-                while(*p && !IS_SPACE(*p)) p++;
+                while (*p && !IS_SPACE(*p)) p++;
                 if (*p == 0) end = --p;
                 else { end = p - 1; *p = 0; }
             }
             else
             {
-                while(*p && *start != *p) p++;
+                while (*p && *start != *p) p++;
                 if (*p == 0) end = --p;
                 else { start ++; end = p - 1; *p = 0; }
             }
@@ -288,7 +289,7 @@ static void free_args(char** argv)
     if (!argv)
         return;
 
-    for(ii = 0; argv[ii]; ii++)
+    for (ii = 0; argv[ii]; ii++)
         free(argv[ii]);
 
     free(argv);

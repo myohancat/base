@@ -125,7 +125,7 @@ void IRQ::run()
     char dummy;
     ::read(mFD, &dummy, 1);
 
-    while(!mExitTask)
+    while (!mExitTask)
     {
         ret = ::poll(fds, nfds, POLL_TIMEOUT);
         if (ret == 0)

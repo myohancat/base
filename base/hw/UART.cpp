@@ -112,7 +112,7 @@ int UART::write(const uint8_t* data, int len)
 void UART::run()
 {
 __TRACE__
-    while(!mExitTask)
+    while (!mExitTask)
     {
         int ret = NetUtil::fd_poll(mFD, POLL_REQ_IN, 1000, mPipe.getFD());
         if (ret < 0)

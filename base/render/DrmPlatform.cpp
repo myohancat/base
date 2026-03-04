@@ -372,7 +372,7 @@ void DrmPlatform::flip()
 #ifdef FLIP_CALL_DIRECTLY
 void DrmPlatform::run()
 {
-    while(!mExitTask)
+    while (!mExitTask)
     {
         /* NOP */
         msleep(100);

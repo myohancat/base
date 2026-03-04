@@ -22,7 +22,7 @@ namespace FileUtil
 int filesize(const char* file, size_t* psize)
 {
     struct stat st;
-    if(stat(file, &st) == -1)
+    if (stat(file, &st) == -1)
     {
         LOGE("Cannot get stat %s : errno(%d) - %s", file, errno, strerror(errno));
         return -1;
@@ -37,24 +37,24 @@ int filesize(const char* file, size_t* psize)
         char   path[MAX_PATH_LEN];
 
         dir = opendir(file);
-        if(!dir)
+        if (!dir)
         {
             LOGE("opendir failed : %s", file);
             return -1;
         }
 
-        while((de = readdir(dir)))
+        while ((de = readdir(dir)))
         {
             size_t sub_size = 0;
 
-            if(de->d_name[0] == '.')
+            if (de->d_name[0] == '.')
             {
-                if(de->d_name[1] == '\0' || (de->d_name[1] == '.' && de->d_name[2] == '\0'))
+                if (de->d_name[1] == '\0' || (de->d_name[1] == '.' && de->d_name[2] == '\0'))
                     continue;
             }
 
             sprintf(path, "%s/%s", file, de->d_name);
-            if(stat(path, &st) == -1)
+            if (stat(path, &st) == -1)
                 continue;
 
             ret = filesize(path, &sub_size);
@@ -87,7 +87,7 @@ int copy(const char* src, const char* dst, CopyCB_fn fnCB, void* param)
 {
     struct stat st;
 
-    if(stat(src, &st) == -1)
+    if (stat(src, &st) == -1)
     {
         LOGE("Cannot get stat %s : errno(%d) - %s", src, errno, strerror(errno));
         return -1;
@@ -101,18 +101,18 @@ int copy(const char* src, const char* dst, CopyCB_fn fnCB, void* param)
         char   sub_dst[MAX_PATH_LEN];
 
         dir = opendir(src);
-        if(!dir)
+        if (!dir)
         {
             LOGE("opendir failed : %s", src);
             return -1;
         }
 
         FileUtil::mkdir(dst, st.st_mode);
-        while((de = readdir(dir)))
+        while ((de = readdir(dir)))
         {
-            if(de->d_name[0] == '.')
+            if (de->d_name[0] == '.')
             {
-                if(de->d_name[1] == '\0' || (de->d_name[1] == '.' && de->d_name[2] == '\0'))
+                if (de->d_name[1] == '\0' || (de->d_name[1] == '.' && de->d_name[2] == '\0'))
                     continue;
             }
 
@@ -150,9 +150,9 @@ int copy(const char* src, const char* dst, CopyCB_fn fnCB, void* param)
         }
 
         const char* p = strrchr(src, '/');
-        if(p) p++;
+        if (p) p++;
 
-        while((readSize = fread(buffer, 1, sizeof(buffer), fpSrc)) > 0)
+        while ((readSize = fread(buffer, 1, sizeof(buffer), fpSrc)) > 0)
         {
             writeSize = fwrite(buffer, 1, readSize, fpDst);
             if (fnCB)
@@ -174,7 +174,7 @@ int copy(const char* src, const char* dst, CopyCB_fn fnCB, void* param)
 
 bool exist(const char* path)
 {
-    if(access(path, F_OK) == 0)
+    if (access(path, F_OK) == 0)
         return true;
 
     return false;
@@ -187,10 +187,10 @@ int mkdir(const char* path, mode_t mode)
     int ret = -1;
     const char* p = path;
 
-    if(path == NULL || strlen(path) == 0)
+    if (path == NULL || strlen(path) == 0)
         return ret;
 
-    while((p = strchr(p, '/')) != NULL)
+    while ((p = strchr(p, '/')) != NULL)
     {
         len = p - path;
         p++;
@@ -226,17 +226,17 @@ void rm(const char* path)
         struct dirent* de;
 
         dir = opendir(path);
-        if(!dir)
+        if (!dir)
         {
             LOGE("opendir failed : %s", path);
             return;
         }
 
-        while((de = readdir(dir)))
+        while ((de = readdir(dir)))
         {
-            if(de->d_name[0] == '.')
+            if (de->d_name[0] == '.')
             {
-                if(de->d_name[1] == '\0' || (de->d_name[1] == '.' && de->d_name[2] == '\0'))
+                if (de->d_name[1] == '\0' || (de->d_name[1] == '.' && de->d_name[2] == '\0'))
                     continue;
             }
 

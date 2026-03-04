@@ -44,7 +44,7 @@ Color::~Color()
 
 Color& Color::operator=(const Color& color)
 {
-    if(this != &color)
+    if (this != &color)
     {
         mRed = color.getRed();
         mGreen = color.getGreen();

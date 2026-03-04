@@ -45,7 +45,7 @@ void Point::setPoint(int x, int y)
 
 Point& Point::operator=(const Point& p)
 {
-    if(this != &p)
+    if (this != &p)
     {
         mX = p.mX;
         mY = p.mY;

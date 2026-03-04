@@ -39,7 +39,7 @@ void TimerTask::start(uint32_t msec, bool repeat)
     mIntervalMs = msec;
     mExitTask   = false;
 
-    if(!Task::start())
+    if (!Task::start())
     {
         LOGE("failed to create task");
     }
@@ -73,7 +73,7 @@ bool TimerTask::getRepeat() const
 
 void TimerTask::run()
 {
-    while(!mExitTask)
+    while (!mExitTask)
     {
         uint64_t expireTime = mStartTime + mIntervalMs;
         uint64_t timeoutMs  = expireTime - SysTime::getTickCountMs();
@@ -86,7 +86,7 @@ void TimerTask::run()
         if (mHandler)
             mHandler->onTimerExpired(this);
 
-        if(mRepeat == false)
+        if (mRepeat == false)
             break;
 
         mStartTime = expireTime;

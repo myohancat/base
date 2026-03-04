@@ -145,10 +145,10 @@ private:
         {
             Lock lock(mLock);
 
-            if(!listener)
+            if (!listener)
                 return;
 
-            auto it = std::find_if(mListeners.begin(), mListeners.end(),
+            auto it = std::find_if (mListeners.begin(), mListeners.end(),
                 [listener](const ListenerEntry<TListener>& entry)
                 {
                     return entry.mListener == listener;
@@ -171,10 +171,10 @@ private:
         {
             Lock lock(mLock);
 
-            if(!listener)
+            if (!listener)
                 return;
 
-            auto it = std::find_if(mListeners.begin(), mListeners.end(),
+            auto it = std::find_if (mListeners.begin(), mListeners.end(),
                 [listener](const ListenerEntry<TListener>& entry)
                 {
                     return entry.mListener == listener;
@@ -196,7 +196,7 @@ private:
             Lock lock(mLock);
             for (auto& entry : mListeners)
             {
-                if(func(entry.mListener))
+                if (func(entry.mListener))
                     break;
             }
         }

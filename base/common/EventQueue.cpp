@@ -30,7 +30,7 @@ void EventQueue::sendEvent(int id, void* data, int dataLen)
 {
     Lock lock(mTxLock);
 
-    if(mEOS)
+    if (mEOS)
         return;
 
     if (dataLen > MAX_DATA_LEN)
@@ -90,7 +90,7 @@ bool EventQueue::onFdReadable(UNUSED_PARAM int fd)
         return true;
 
     mLock.lock();
-    if(mHandler)
+    if (mHandler)
         mHandler->onEventReceived(id, data, len);
     mLock.unlock();
 

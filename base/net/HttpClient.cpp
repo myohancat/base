@@ -58,7 +58,7 @@ HttpResponse::~HttpResponse()
 static const char* to_undercase(char* str)
 {
     char* p = str;
-    while(*p) { *p = toupper(*p); p++; }
+    while (*p) { *p = toupper(*p); p++; }
 
     return str;
 }

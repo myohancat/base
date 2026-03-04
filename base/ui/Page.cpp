@@ -138,13 +138,13 @@ bool Page::onKeyReceived(int keyCode, int state)
         return false;
 
     #if 1 /* W/A Drop Invalid Up KeyCode */
-    if(state == KEY_PRESSED)
+    if (state == KEY_PRESSED)
         mLastKeyCode = keyCode;
     else if (state == KEY_RELEASED && mLastKeyCode != keyCode)
         return false;
     #endif
 
-    for(WidgetList::iterator it = mWidgetList.begin(); it != mWidgetList.end(); it++)
+    for (WidgetList::iterator it = mWidgetList.begin(); it != mWidgetList.end(); it++)
     {
         if ((*it)->isFocused() && (*it)->onKeyReceived(keyCode, state) == true)
             return true;
@@ -153,11 +153,11 @@ bool Page::onKeyReceived(int keyCode, int state)
     if (onProcessKey(keyCode, state))
         return true;
 
-    if(state == KEY_PRESSED)
+    if (state == KEY_PRESSED)
         return onKeyPressed(keyCode);
-    else if(state == KEY_RELEASED)
+    else if (state == KEY_RELEASED)
         return onKeyReleased(keyCode);
-    else if(state == KEY_REPEATED)
+    else if (state == KEY_REPEATED)
         return onKeyRepeated(keyCode);
 
     return false;

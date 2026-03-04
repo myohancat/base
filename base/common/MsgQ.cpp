@@ -101,7 +101,7 @@ void MsgQ::remove(int what)
 
     std::deque<Msg>::iterator it = mQueue.begin();
 
-    while(it != mQueue.end())
+    while (it != mQueue.end())
     {
         if ((*it).what == what)
             it = mQueue.erase(it);

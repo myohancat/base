@@ -142,7 +142,7 @@ void* HttpServer::requestHandler(enum mg_event event, struct mg_connection* conn
             if (pThis->doGET(conn, clientIp, request_info->uri, request_info->query_string))
                 return DONE;
         }
-        else if(strncmp(request_info->request_method, "POST", 4) == 0)
+        else if (strncmp(request_info->request_method, "POST", 4) == 0)
         {
             char body[MAX_BODY_SIZE +2] = {0x00, };
             int  bodySize = mg_read(conn, body, sizeof(body));
@@ -156,7 +156,7 @@ void* HttpServer::requestHandler(enum mg_event event, struct mg_connection* conn
             if (pThis->doPOST(conn, clientIp, request_info->uri, body))
                 return DONE;
         }
-        else if(strncmp(request_info->request_method, "PUT", 3) == 0)
+        else if (strncmp(request_info->request_method, "PUT", 3) == 0)
         {
             char body[MAX_BODY_SIZE +2] = {0x00, };
             int  bodySize = mg_read(conn, body, sizeof(body));
@@ -170,7 +170,7 @@ void* HttpServer::requestHandler(enum mg_event event, struct mg_connection* conn
             if (pThis->doPUT(conn, clientIp, request_info->uri, body))
                 return DONE;
         }
-        else if(strncmp(request_info->request_method, "DELETE", 4) == 0)
+        else if (strncmp(request_info->request_method, "DELETE", 4) == 0)
         {
             /* TODO */
             if (pThis->doDELETE(conn, clientIp, request_info->uri))

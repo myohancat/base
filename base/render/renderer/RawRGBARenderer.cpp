@@ -92,7 +92,7 @@ RawRGBARenderer::RawRGBARenderer(float alpha, ColorMode_e eMode)
 
 RawRGBARenderer::~RawRGBARenderer()
 {
-    if(mTexture != (GLuint)-1)
+    if (mTexture != (GLuint)-1)
         glDeleteTextures(1, &mTexture);
 
     glDeleteProgram(mProgram);

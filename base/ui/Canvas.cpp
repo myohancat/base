@@ -268,7 +268,7 @@ int Canvas::getDmaBufFd()
 
 void* Canvas::getPixels()
 {
-    if(!mBitmap)
+    if (!mBitmap)
         return NULL;
 
     return mBitmap->getPixels();

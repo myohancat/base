@@ -95,7 +95,7 @@ WindowRenderer::~WindowRenderer()
         mEglImage = EGL_NO_IMAGE_KHR;
     }
 
-    if(mTexture != (GLuint)-1)
+    if (mTexture != (GLuint)-1)
         glDeleteTextures(1, &mTexture);
 
     glDeleteProgram(mProgram);

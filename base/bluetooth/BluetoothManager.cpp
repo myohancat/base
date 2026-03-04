@@ -69,11 +69,11 @@ BluetoothManager& BluetoothManager::getInstance()
 
 void BluetoothManager::addBluetoothListener(IBluetoothListener* listener)
 {
-    if(!listener)
+    if (!listener)
         return;
 
     BtListenerList::iterator it = std::find(mBtListeners.begin(), mBtListeners.end(), listener);
-    if(it != mBtListeners.end())
+    if (it != mBtListeners.end())
         return;
 
     mBtListeners.push_back(listener);
@@ -81,12 +81,12 @@ void BluetoothManager::addBluetoothListener(IBluetoothListener* listener)
 
 void BluetoothManager::removeBluetoothListener(IBluetoothListener* listener)
 {
-    if(!listener)
+    if (!listener)
         return;
 
-    for(BtListenerList::iterator it = mBtListeners.begin(); it != mBtListeners.end(); it++)
+    for (BtListenerList::iterator it = mBtListeners.begin(); it != mBtListeners.end(); it++)
     {
-        if(listener == *it)
+        if (listener == *it)
         {
             mBtListeners.erase(it);
             return;
@@ -99,40 +99,40 @@ void BluetoothManager::onEventReceived(int eventId, void* data, int dataLen)
     UNUSED(dataLen);
     void* p = UINTPTR_TO_PTR(data);
 
-    if(eventId == BT_EVENT_ADD_DEVICE)
+    if (eventId == BT_EVENT_ADD_DEVICE)
     {
         BluetoothDevice* device = (BluetoothDevice*)p;
-        for(BtListenerList::iterator it = mBtListeners.begin(); it != mBtListeners.end(); it++)
+        for (BtListenerList::iterator it = mBtListeners.begin(); it != mBtListeners.end(); it++)
         {
             (*it)->onDeviceAdded(device);
         }
         if (device)
             delete device;
     }
-    else if(eventId == BT_EVENT_REMOVE_DEVICE)
+    else if (eventId == BT_EVENT_REMOVE_DEVICE)
     {
         BluetoothDevice* device = (BluetoothDevice*)p;
-        for(BtListenerList::iterator it = mBtListeners.begin(); it != mBtListeners.end(); it++)
+        for (BtListenerList::iterator it = mBtListeners.begin(); it != mBtListeners.end(); it++)
         {
             (*it)->onDeviceRemoved(device);
         }
         if (device)
             delete device;
     }
-    else if(eventId == BT_EVENT_CHANGE_DEVICE)
+    else if (eventId == BT_EVENT_CHANGE_DEVICE)
     {
         BluetoothDevice* device = (BluetoothDevice*)p;
-        for(BtListenerList::iterator it = mBtListeners.begin(); it != mBtListeners.end(); it++)
+        for (BtListenerList::iterator it = mBtListeners.begin(); it != mBtListeners.end(); it++)
         {
             (*it)->onDeviceChanged(device);
         }
         if (device)
             delete device;
     }
-    else if(eventId == BT_EVENT_PAIR_DEVICE)
+    else if (eventId == BT_EVENT_PAIR_DEVICE)
     {
         BluetoothDevice* device = (BluetoothDevice*)p;
-        for(BtListenerList::iterator it = mBtListeners.begin(); it != mBtListeners.end(); it++)
+        for (BtListenerList::iterator it = mBtListeners.begin(); it != mBtListeners.end(); it++)
         {
             (*it)->onDevicePaired(device);
         }
@@ -141,30 +141,30 @@ void BluetoothManager::onEventReceived(int eventId, void* data, int dataLen)
         if (device)
             delete device;
     }
-    else if(eventId == BT_EVENT_CONNECT_DEVICE)
+    else if (eventId == BT_EVENT_CONNECT_DEVICE)
     {
         BluetoothDevice* device = (BluetoothDevice*)p;
         LOGI("device connected");
-        for(BtListenerList::iterator it = mBtListeners.begin(); it != mBtListeners.end(); it++)
+        for (BtListenerList::iterator it = mBtListeners.begin(); it != mBtListeners.end(); it++)
         {
             (*it)->onDeviceConnected(device);
         }
         if (device)
             delete device;
     }
-    else if(eventId == BT_EVENT_DISCONNECT_DEVICE)
+    else if (eventId == BT_EVENT_DISCONNECT_DEVICE)
     {
         BluetoothDevice* device = (BluetoothDevice*)p;
         LOGI("device disconnected");
-        for(BtListenerList::iterator it = mBtListeners.begin(); it != mBtListeners.end(); it++)
+        for (BtListenerList::iterator it = mBtListeners.begin(); it != mBtListeners.end(); it++)
         {
             (*it)->onDeviceDisconnected(device);
         }
     }
-    else if(eventId == BT_EVENT_ERROR)
+    else if (eventId == BT_EVENT_ERROR)
     {
         BtError* err = (BtError*)p;
-        for(BtListenerList::iterator it = mBtListeners.begin(); it != mBtListeners.end(); it++)
+        for (BtListenerList::iterator it = mBtListeners.begin(); it != mBtListeners.end(); it++)
         {
             (*it)->onErrorOccured(err->mNum, err->mMsg.c_str());
         }
@@ -237,7 +237,7 @@ void BluetoothManager::scan(bool enable)
 
     LOGI("----- REQUEST SCAN : %s", enable?"ON":"OFF");
 
-    if(check_default_ctrl() == FALSE)
+    if (check_default_ctrl() == FALSE)
     {
         LOGE("there is no default ctrl !");
         return;
@@ -248,7 +248,7 @@ void BluetoothManager::scan(bool enable)
     else
         method = "StopDiscovery";
 
-    if(g_dbus_proxy_method_call(default_ctrl->proxy, method, NULL, _start_discovery_reply, new DbusParam(this, GUINT_TO_POINTER(enable)), NULL) == FALSE)
+    if (g_dbus_proxy_method_call(default_ctrl->proxy, method, NULL, _start_discovery_reply, new DbusParam(this, GUINT_TO_POINTER(enable)), NULL) == FALSE)
     {
         LOGE("Failed to %s discovery", enable == TRUE ? "start" : "stop");
         return;
@@ -265,7 +265,7 @@ void BluetoothManager::discoverable(bool enable)
 
     str = g_strdup_printf("discoverable %s", discoverable == TRUE ? "on" : "off");
 
-    if(g_dbus_proxy_set_property_basic(default_ctrl->proxy, "Discoverable",
+    if (g_dbus_proxy_set_property_basic(default_ctrl->proxy, "Discoverable",
                     DBUS_TYPE_BOOLEAN, &discoverable,
                     _generic_callback, str, g_free) == TRUE)
         return;
@@ -297,7 +297,7 @@ void BluetoothManager::_pair_reply(DBusMessage *message, void *user_data)
 
     dbus_error_init(&error);
 
-    if(dbus_set_error_from_message(&error, message) == TRUE)
+    if (dbus_set_error_from_message(&error, message) == TRUE)
     {
         LOGE("Failed to pair: %s", error.name);
         pThis->sendEventError(BT_ERROR_PAIRING_FAILED, error.name);
@@ -316,10 +316,10 @@ void BluetoothManager::pair(const char* device)
     LOGI("----- REQUEST PAIRING : %s", device);
 
     proxy = find_device(device);
-    if(!proxy)
+    if (!proxy)
         return;
 
-    if(g_dbus_proxy_method_call(proxy, "Pair", NULL, _pair_reply, new DbusParam(this, proxy), NULL) == FALSE)
+    if (g_dbus_proxy_method_call(proxy, "Pair", NULL, _pair_reply, new DbusParam(this, proxy), NULL) == FALSE)
     {
         LOGE("Failed to pair");
         return;
@@ -335,7 +335,7 @@ void BluetoothManager::trust(const char* device)
     LOGI("----- SET TRUST : %s", device);
 
     proxy = find_device(device);
-    if(!proxy)
+    if (!proxy)
         return;
 
     char *str;
@@ -343,7 +343,7 @@ void BluetoothManager::trust(const char* device)
 
     str = g_strdup_printf("%s trust", device);
 
-    if(g_dbus_proxy_set_property_basic(proxy, "Trusted", DBUS_TYPE_BOOLEAN, &trusted, _generic_callback, str, g_free) == TRUE)
+    if (g_dbus_proxy_set_property_basic(proxy, "Trusted", DBUS_TYPE_BOOLEAN, &trusted, _generic_callback, str, g_free) == TRUE)
         return;
 
     g_free(str);
@@ -380,13 +380,13 @@ void BluetoothManager::connect(const char* device)
 
     LOGI("----- REQUEST CONNECT : %s", device);
 
-    if(!device || !strlen(device))
+    if (!device || !strlen(device))
     {
         LOGE("Missing device address argument");
         return;
     }
 
-    if(check_default_ctrl() == FALSE)
+    if (check_default_ctrl() == FALSE)
         return;
 
     proxy = find_proxy_by_address(default_ctrl->devices, device);
@@ -396,7 +396,7 @@ void BluetoothManager::connect(const char* device)
         return;
     }
 
-    if(g_dbus_proxy_method_call(proxy, "Connect", NULL, _connect_reply, new DbusParam(this, proxy), NULL) == FALSE)
+    if (g_dbus_proxy_method_call(proxy, "Connect", NULL, _connect_reply, new DbusParam(this, proxy), NULL) == FALSE)
     {
         LOGE("Failed to connect");
         return;
@@ -418,7 +418,7 @@ void BluetoothManager::_disconn_reply(DBusMessage *message, void *user_data)
 
     dbus_error_init(&error);
 
-    if(dbus_set_error_from_message(&error, message) == TRUE)
+    if (dbus_set_error_from_message(&error, message) == TRUE)
     {
         LOGE("Failed to disconnect: %s", error.name);
         pThis->sendEventError(BT_ERROR_DISCONNECT_FAILED, error.name);
@@ -447,15 +447,15 @@ void BluetoothManager::disconnect(const char* device, bool remove)
     LOGI("----- REQUEST DISCONNECT : %s", device);
 
     proxy = find_device(device);
-    if(!proxy)
+    if (!proxy)
         return;
 
-    if(g_dbus_proxy_method_call(proxy, "Disconnect", NULL, _disconn_reply, new DbusParam(this, remove, proxy), NULL) == FALSE)
+    if (g_dbus_proxy_method_call(proxy, "Disconnect", NULL, _disconn_reply, new DbusParam(this, remove, proxy), NULL) == FALSE)
     {
         LOGE("Failed to disconnect");
         return;
     }
-    if(strlen(device) == 0)
+    if (strlen(device) == 0)
     {
         DBusMessageIter iter;
 
@@ -513,15 +513,15 @@ void BluetoothManager::remove(const char* device)
 
     LOGI("----- REQUEST REMOVE : %s", device);
 
-    if(check_default_ctrl() == FALSE)
+    if (check_default_ctrl() == FALSE)
         return;
 
-    if(!device)
+    if (!device)
     {
         LOGE("device is null !");
     }
     proxy = find_proxy_by_address(default_ctrl->devices, device);
-    if(!proxy)
+    if (!proxy)
     {
         LOGE("Device %s is not avaliable", device);
         return;
@@ -534,14 +534,14 @@ void BluetoothManager::removeDeviceAll()
 {
     GList *list;
 
-    if(check_default_ctrl() == FALSE)
+    if (check_default_ctrl() == FALSE)
         return;
 
-    for(list = default_ctrl->devices; list; list = g_list_next(list))
+    for (list = default_ctrl->devices; list; list = g_list_next(list))
     {
         BluetoothDevice device;
         GDBusProxy *proxy = (GDBusProxy *)list->data;
-        if(!getDeviceFromProxy(proxy, &device))
+        if (!getDeviceFromProxy(proxy, &device))
         {
             remove_device(proxy);
         }
@@ -552,14 +552,14 @@ void BluetoothManager::removeDeviceAllWithoutPaired()
 {
     GList *list;
 
-    if(check_default_ctrl() == FALSE)
+    if (check_default_ctrl() == FALSE)
         return;
 
-    for(list = default_ctrl->devices; list; list = g_list_next(list))
+    for (list = default_ctrl->devices; list; list = g_list_next(list))
     {
         BluetoothDevice device;
         GDBusProxy *proxy = (GDBusProxy *)list->data;
-        if(!getDeviceFromProxy(proxy, &device) && !device.isPaired())
+        if (!getDeviceFromProxy(proxy, &device) && !device.isPaired())
         {
             remove_device(proxy);
         }
@@ -596,25 +596,25 @@ int  BluetoothManager::getDeviceFromProxy(GDBusProxy* proxy, BluetoothDevice* de
     if (g_dbus_proxy_get_property(proxy, "Icon", &iter) == TRUE)
     {
         dbus_message_iter_get_basic(&iter, &icon);
-        if(!strcmp(icon, "phone"))
+        if (!strcmp(icon, "phone"))
             eType = BT_TYPE_PHONE;
-        else if(!strcmp(icon, "modem"))
+        else if (!strcmp(icon, "modem"))
             eType = BT_TYPE_MODEM;
-        else if(!strcmp(icon, "audio-card"))
+        else if (!strcmp(icon, "audio-card"))
             eType = BT_TYPE_AUDIO;
-        else if(!strcmp(icon, "camera-video"))
+        else if (!strcmp(icon, "camera-video"))
             eType = BT_TYPE_VIDEO;
-        else if(!strcmp(icon, "camera-photo"))
+        else if (!strcmp(icon, "camera-photo"))
             eType = BT_TYPE_PHOTO;
-        else if(!strcmp(icon, "input-gaming"))
+        else if (!strcmp(icon, "input-gaming"))
             eType = BT_TYPE_INPUT;
-        else if(!strcmp(icon, "input-keyboard"))
+        else if (!strcmp(icon, "input-keyboard"))
             eType = BT_TYPE_INPUT;
-        else if(!strcmp(icon, "input-tablet"))
+        else if (!strcmp(icon, "input-tablet"))
             eType = BT_TYPE_INPUT;
-        else if(!strcmp(icon, "input-mouse"))
+        else if (!strcmp(icon, "input-mouse"))
             eType = BT_TYPE_INPUT;
-        else if(!strcmp(icon, "printer"))
+        else if (!strcmp(icon, "printer"))
             eType = BT_TYPE_PRINTER;
     }
     else if (g_dbus_proxy_get_property(proxy, "Appearance", &iter) == TRUE)
@@ -658,7 +658,7 @@ void  BluetoothManager::sendEventFromProxy(int eventId, GDBusProxy* proxy)
 {
     BluetoothDevice* device = new BluetoothDevice();
 
-    if(getDeviceFromProxy(proxy, device))
+    if (getDeviceFromProxy(proxy, device))
     {
         delete device;
         return;
@@ -686,7 +686,7 @@ void BluetoothManager::getDeviceList(std::vector<BluetoothDevice*>& list)
         GDBusProxy *proxy = (GDBusProxy*)ll->data;
 
         BluetoothDevice* device = new BluetoothDevice();
-        if(!getDeviceFromProxy(proxy, device))
+        if (!getDeviceFromProxy(proxy, device))
             list.push_back(device);
         else
             delete device;
@@ -705,7 +705,7 @@ void BluetoothManager::getDeviceListWithoutPaired(std::vector<BluetoothDevice*>&
         GDBusProxy *proxy = (GDBusProxy*)ll->data;
 
         BluetoothDevice* device = new BluetoothDevice();
-        if(!getDeviceFromProxy(proxy, device) && !device->isPaired())
+        if (!getDeviceFromProxy(proxy, device) && !device->isPaired())
             list.push_back(device);
         else
             delete device;
@@ -733,7 +733,7 @@ void BluetoothManager::getPairedDeviceList(std::vector<BluetoothDevice*>& list)
             continue;
 
         BluetoothDevice* device = new BluetoothDevice();
-        if(!getDeviceFromProxy(proxy, device))
+        if (!getDeviceFromProxy(proxy, device))
             list.push_back(device);
         else
             delete device;
@@ -919,7 +919,7 @@ void BluetoothManager::proxy_removed(GDBusProxy *proxy, void *user_data)
     } else if (!strcmp(interface, "org.bluez.GattManager1")) {
         gatt_remove_manager(proxy);
     } else if (!strcmp(interface, "org.bluez.LEAdvertisingManager1")) {
-        if(!dbus_conn){
+        if (!dbus_conn){
             ad_unregister(dbus_conn, NULL);
         }
     }
@@ -1370,7 +1370,7 @@ void BluetoothManager::cmd_bt_scan(ICliSession* session, int argc, char** argv, 
 
     BluetoothManager* pThis = (BluetoothManager*)param;
 
-    if(argc != 2)
+    if (argc != 2)
         return;
 
     bool mode = atoi(argv[1]) == 1 ? true : false;
@@ -1383,7 +1383,7 @@ void BluetoothManager::cmd_bt_discoverable(ICliSession* session, int argc, char*
 
     BluetoothManager* pThis = (BluetoothManager*)param;
 
-    if(argc != 2)
+    if (argc != 2)
         return;
 
     bool mode = atoi(argv[1]) == 1 ? true : false;
@@ -1397,7 +1397,7 @@ void BluetoothManager::cmd_bt_pair(ICliSession* session, int argc, char** argv, 
 
     BluetoothManager* pThis = (BluetoothManager*)param;
 
-    if(argc != 2)
+    if (argc != 2)
         return;
 
     char dev[1024];
@@ -1413,7 +1413,7 @@ void BluetoothManager::cmd_bt_trust(ICliSession* session, int argc, char** argv,
 
     BluetoothManager* pThis = (BluetoothManager*)param;
 
-    if(argc != 2)
+    if (argc != 2)
         return;
 
     char dev[1024];

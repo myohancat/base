@@ -127,7 +127,7 @@ __TRACE__
     eglSwapInterval(mDisplay, 0);
 
     DmaBufImage image;
-    while(!mExitTask)
+    while (!mExitTask)
     {
         if (!mMsgQ.get(&image, -1))
             continue;

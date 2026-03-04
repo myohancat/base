@@ -128,7 +128,7 @@ inline void GstAppsinkRenderable::setMVP(float* mvp)
 {
     Lock lock(mLock);
 
-    for(int ii = 0; ii < 16; ii++)
+    for (int ii = 0; ii < 16; ii++)
         mMVP[ii] = mvp[ii];
 
     if (mRenderer)

@@ -115,10 +115,10 @@ Rectangle Rectangle::intersection(const Rectangle& rect) const
 
 void Rectangle::united(const Rectangle& rect)
 {
-    if(!rect.isValid())
+    if (!rect.isValid())
         return;
 
-    if(!isValid())
+    if (!isValid())
     {
         setRectangle(rect);
         return;
@@ -138,7 +138,7 @@ void Rectangle::united(const Rectangle& rect)
 
 Rectangle& Rectangle::operator=(const Rectangle &rect)
 {
-    if(this != &rect)
+    if (this != &rect)
     {
         mX = rect.mX;
         mY = rect.mY;

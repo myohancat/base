@@ -100,7 +100,7 @@ bool EEPROM::readBytes(uint16_t memAddr, void* buf, int len)
         return false;
     }
 
-    while(len > 0)
+    while (len > 0)
     {
         int rsize = (len > mPageSize)? mPageSize: len;
 

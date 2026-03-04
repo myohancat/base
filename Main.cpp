@@ -27,7 +27,7 @@ __TRACE__
     PRINT("PRINT");
     CHECK("CHECK");
 
-    while(MainLoop::getInstance().loop()) { }   
+    while (MainLoop::getInstance().loop()) { }   
 
     /* TODO */
 

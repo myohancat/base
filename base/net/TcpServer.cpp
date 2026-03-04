@@ -50,7 +50,7 @@ void TcpSession::run()
         mServer->notifyTcpSessionEstablished(this);
     mLock.unlock();
 
-    while(!mExitTask)
+    while (!mExitTask)
     {
         int ret = NetUtil::fd_poll(mSock, POLL_REQ_IN, 1000, mPipe.getFD());
         if (ret < 0)
@@ -105,13 +105,13 @@ bool TcpServer::start(int port)
     mSock = NetUtil::socket(SOCK_TYPE_TCP);
 
     NetUtil::socket_set_reuseaddr(mSock);
-    if(NetUtil::bind(mSock, NULL, port) < 0 )
+    if (NetUtil::bind(mSock, NULL, port) < 0 )
     {
         SAFE_CLOSE(mSock);
         return false;
     }
 
-    if(NetUtil::listen(mSock, 2) == -1 )
+    if (NetUtil::listen(mSock, 2) == -1 )
     {
         SAFE_CLOSE(mSock);
         return false;
@@ -150,7 +150,7 @@ void TcpServer::clearSession()
 {
     Lock lock(mLock);
 
-    for(std::list<TcpSession*>::iterator it = mSessions.begin(); it != mSessions.end(); it++)
+    for (std::list<TcpSession*>::iterator it = mSessions.begin(); it != mSessions.end(); it++)
     {
         delete *it;
     }
@@ -163,7 +163,7 @@ void TcpServer::notifyTcpSessionEstablished(TcpSession* session)
     Lock lock(mLock);
 
     std::list<TcpSession*>::iterator it = std::find(mSessions.begin(), mSessions.end(), session);
-    if(it != mSessions.end())
+    if (it != mSessions.end())
     {
         LOGE("Session %s is alreay exsit !!");
         return;
@@ -179,9 +179,9 @@ void TcpServer::notifyTcpSessionRemoved(TcpSession* session)
 {
     Lock lock(mLock);
 
-    for(std::list<TcpSession*>::iterator it = mSessions.begin(); it != mSessions.end(); it++)
+    for (std::list<TcpSession*>::iterator it = mSessions.begin(); it != mSessions.end(); it++)
     {
-        if(session == *it)
+        if (session == *it)
         {
             mSessions.erase(it);
             LOGD("TCP Session Removed : %s", session->getAddress().c_str());
@@ -206,7 +206,7 @@ bool TcpServer::onFdReadable(int fd)
     char szIP[1024];
 
     int clntSock = NetUtil::accept(fd, szIP, sizeof(szIP));
-    if(clntSock < 0)
+    if (clntSock < 0)
         return true;
 
     LOGI("Connected Client (%s)!", szIP);

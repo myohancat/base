@@ -18,7 +18,7 @@ Image::Image(const std::string& path, bool preload)
         mWidth(-1),
         mHeight(-1)
 {
-    if(preload)
+    if (preload)
         loadImage();
 }
 
@@ -28,7 +28,7 @@ Image::Image(const std::string& path, int width, int height, bool preload)
         mWidth(width),
         mHeight(height)
 {
-    if(preload)
+    if (preload)
         loadImage();
 }
 
@@ -73,7 +73,7 @@ Image::~Image()
 
 int Image::getWidth()
 {
-    if(!mBitmap)
+    if (!mBitmap)
         loadImage();
 
     return mWidth;
@@ -82,7 +82,7 @@ int Image::getWidth()
 
 int Image::getHeight()
 {
-    if(!mBitmap)
+    if (!mBitmap)
         loadImage();
 
     return mHeight;
@@ -91,7 +91,7 @@ int Image::getHeight()
 
 Size Image::getSize()
 {
-    if(!mBitmap)
+    if (!mBitmap)
         loadImage();
 
     return Size(mWidth, mHeight);
@@ -100,7 +100,7 @@ Size Image::getSize()
 void Image::flush()
 {
 #if 0 /* [XXX] TBD. IMPLMENTS HERE */
-    if(mDFBSurface != NULL)
+    if (mDFBSurface != NULL)
     {
         mDFBSurface->Release(mDFBSurface);
         mDFBSurface = NULL;

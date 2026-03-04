@@ -52,7 +52,7 @@ InputDevice::InputDevice(const std::string& path)
               mId(-1)
 {
     mFD = open(path.c_str(), O_RDWR);
-    if(mFD < 0)
+    if (mFD < 0)
     {
         LOGE("cannot open file ! %s - %s", path.c_str(), strerror(errno));
         return;
@@ -65,7 +65,7 @@ InputDevice::InputDevice(const std::string& path)
 
 InputDevice::~InputDevice()
 {
-    if(mFD >= 0)
+    if (mFD >= 0)
         close(mFD);
 }
 
@@ -121,7 +121,7 @@ void InputDevice::loadAttrib()
         mName = buffer;
     }
 
-    if(ioctl(mFD, EVIOCGID, &inputId))
+    if (ioctl(mFD, EVIOCGID, &inputId))
     {
         LOGE("Cannot getValue Input Device ID");
         return;
@@ -167,9 +167,9 @@ InputManager::~InputManager()
     mExitProc = true;
     stop();
 
-    if(mWD >= 0)
+    if (mWD >= 0)
         close(mWD);
-    if(mFD >= 0)
+    if (mFD >= 0)
         close(mFD);
 }
 
@@ -270,10 +270,10 @@ void InputManager::setRawKeyListener(IRawKeyListener* listener)
 
 void InputManager::addInputDevice(const std::string& devpath)
 {
-    for(InputDeviceList::iterator it = mInputDevices.begin(); it != mInputDevices.end(); it++)
+    for (InputDeviceList::iterator it = mInputDevices.begin(); it != mInputDevices.end(); it++)
     {
         InputDevice* device = *it;
-        if(*device == devpath)
+        if (*device == devpath)
         {
             LOGE("device is alreay exsit : %s !!", devpath.c_str());
             return;
@@ -294,10 +294,10 @@ void InputManager::addInputDevice(const std::string& devpath)
 
 void InputManager::removeInputDevice(const std::string& devpath)
 {
-    for(InputDeviceList::iterator it = mInputDevices.begin(); it != mInputDevices.end(); it++)
+    for (InputDeviceList::iterator it = mInputDevices.begin(); it != mInputDevices.end(); it++)
     {
         InputDevice* device = *it;
-        if(*device == devpath)
+        if (*device == devpath)
         {
             LOGD("---> remove device : %s", devpath.c_str());
             delete device;
@@ -314,17 +314,17 @@ void InputManager::scanInputDevice()
     struct dirent* de;
 
     dir = opendir(DEVICE_PATH);
-    if(!dir)
+    if (!dir)
     {
         LOGE("opendir failed : %s", DEVICE_PATH);
         return;
     }
 
-    while((de = readdir(dir)))
+    while ((de = readdir(dir)))
     {
-        if(de->d_name[0] == '.')
+        if (de->d_name[0] == '.')
         {
-            if(de->d_name[1] == '\0' || (de->d_name[1] == '.' && de->d_name[2] == '\0'))
+            if (de->d_name[1] == '\0' || (de->d_name[1] == '.' && de->d_name[2] == '\0'))
                 continue;
         }
 
@@ -350,14 +350,14 @@ void InputManager::run()
     int    nLastFD = 0;
     int    nCnt    = 0;
 
-    while(!mExitProc)
+    while (!mExitProc)
     {
         FD_ZERO(&sReadFds);
 
         FD_SET(mFD, &sReadFds); // For Watch device [ add | delete ]
         nLastFD = mFD;
 
-        for(InputDeviceList::iterator it = mInputDevices.begin(); it != mInputDevices.end(); it++)
+        for (InputDeviceList::iterator it = mInputDevices.begin(); it != mInputDevices.end(); it++)
         {
             int devFD = (*it)->getFD();
             FD_SET(devFD, &sReadFds);
@@ -369,9 +369,9 @@ void InputManager::run()
         sWait.tv_usec = 100 * 1000;
 
         nCnt = select(nLastFD, &sReadFds, NULL, NULL, &sWait);
-        if(nCnt < 0)
+        if (nCnt < 0)
         {
-            if(nCnt == -1 && errno != EINTR)
+            if (nCnt == -1 && errno != EINTR)
             {
                 LOGE("select error oucced!!! errno=%d", errno);
                 break;
@@ -380,27 +380,27 @@ void InputManager::run()
             continue; /* TIMEOUT */
         }
 
-        if(FD_ISSET(mFD, &sReadFds))
+        if (FD_ISSET(mFD, &sReadFds))
         {
             char buffer[BUF_LEN];
             int ii = 0;
             int len = read(mFD, buffer, BUF_LEN);
 
-            while( ii < len)
+            while ( ii < len)
             {
                 struct inotify_event *event = (struct inotify_event *)&buffer[ii];
                 char devpath[PATH_MAX];
 
-                if(event->len)
+                if (event->len)
                 {
-                    if(event->mask & IN_CREATE)
+                    if (event->mask & IN_CREATE)
                     {
                         sprintf(devpath, "%s/%s", DEVICE_PATH, event->name);
 
                         if (_is_input_device(devpath))
                             addInputDevice(devpath);
                     }
-                    else if(event->mask & IN_DELETE)
+                    else if (event->mask & IN_DELETE)
                     {
                         sprintf(devpath, "%s/%s", DEVICE_PATH, event->name);
                         removeInputDevice(devpath);
@@ -413,20 +413,20 @@ void InputManager::run()
             continue;
         }
 
-        for(InputDeviceList::iterator it = mInputDevices.begin(); it != mInputDevices.end(); it++)
+        for (InputDeviceList::iterator it = mInputDevices.begin(); it != mInputDevices.end(); it++)
         {
             struct input_event event;
             int res = 0;
 
             int devFD = (*it)->getFD();
-            if(FD_ISSET(devFD, &sReadFds))
+            if (FD_ISSET(devFD, &sReadFds))
             {
                 res = read(devFD, &event, sizeof(event));
-                if(res >= (int)sizeof(event))
+                if (res >= (int)sizeof(event))
                 {
-                    if(event.type == EV_KEY)
+                    if (event.type == EV_KEY)
                     {
-                        if(event.value == 0
+                        if (event.value == 0
                            || event.value == 1
                            || event.value == 2
                         )

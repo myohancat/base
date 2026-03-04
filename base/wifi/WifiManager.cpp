@@ -35,13 +35,13 @@ const char* get_passphrase(char* passphrase, const char* ssid, const char* psk)
     sprintf(cmd, "wpa_passphrase \"%s\" %s", ssid, psk);
 
     FILE* fp = popen(cmd, "r");
-    if(fp == NULL)
+    if (fp == NULL)
         return ret;
 
-    while(fgets(line, sizeof(line), fp) != NULL)
+    while (fgets(line, sizeof(line), fp) != NULL)
     {
         char* p = ltrim(line);
-        if(strncmp(p, "psk=", 4) == 0)
+        if (strncmp(p, "psk=", 4) == 0)
         {
             p = rtrim(p+4);
             strcpy(passphrase, p);
@@ -94,7 +94,7 @@ WifiDevice::WifiDevice(const char* str)
             case WIFI_DEVICE_FLAGS:
             {
                 //mFlags = tok;
-                if(strstr(tok, "PSK") != NULL)
+                if (strstr(tok, "PSK") != NULL)
                     mFlags = "PSK";
                 else
                     mFlags = "SAE";
@@ -134,7 +134,7 @@ bool WifiManager::enable()
 __TRACE__
     ProcessUtil::system(IFCONFIG_WLAN0_UP);
 
-    if(!startSupplicant())
+    if (!startSupplicant())
         return false;
 
     return start();
@@ -271,13 +271,13 @@ ERROR:
 
 bool WifiManager::startApMode(const char* ssid, const char* psk)
 {
-    if(!addNetwork())
+    if (!addNetwork())
     {
         LOGE("addNetwork error");
         goto ERROR;
     }
 
-    if(!setApScan(2))
+    if (!setApScan(2))
     {
         LOGE("AP_SCAN error");
         goto ERROR;
@@ -289,43 +289,43 @@ bool WifiManager::startApMode(const char* ssid, const char* psk)
         goto ERROR;
     }
 
-    if(!setSSID(ssid))
+    if (!setSSID(ssid))
     {
         LOGE("setSSID error");
         goto ERROR;
     }
 
-    if(!setKeyMgmt("WPA-PSK"))
+    if (!setKeyMgmt("WPA-PSK"))
     {
         LOGE("setKeyMgmt error");
         goto ERROR;
     }
 
-    if(!setPsk(psk))
+    if (!setPsk(psk))
     {
         LOGE("setPsk error");
         goto ERROR;
     }
 
-    if(!setFrequency(MANAGER_FREQ))
+    if (!setFrequency(MANAGER_FREQ))
     {
         LOGE("setFrequency error");
         goto ERROR;
     }
 
-    if(!setMode(2))
+    if (!setMode(2))
     {
         LOGE("setMode error");
         goto ERROR;
     }
 
-     if(!setRequireHt40(1))
+     if (!setRequireHt40(1))
     {
         LOGE("setRequire_ht40 error");
         goto ERROR;
     }
 
-    if(!enableNetwork(0))
+    if (!enableNetwork(0))
     {
         LOGE("enableNetwork error");
         goto ERROR;
@@ -382,11 +382,11 @@ void WifiManager::addListener(IWifiListener* listener)
 {
     Lock lock(mMutex);
 
-    if(!listener)
+    if (!listener)
         return;
 
     WifiListenerList::iterator it = std::find(mWifiListeners.begin(), mWifiListeners.end(), listener);
-    if(it != mWifiListeners.end())
+    if (it != mWifiListeners.end())
         return;
 
     mWifiListeners.push_back(listener);
@@ -396,12 +396,12 @@ void WifiManager::removeListener(IWifiListener* listener)
 {
     Lock lock(mMutex);
 
-    if(!listener)
+    if (!listener)
         return;
 
-    for(WifiListenerList::iterator it = mWifiListeners.begin(); it != mWifiListeners.end(); it++)
+    for (WifiListenerList::iterator it = mWifiListeners.begin(); it != mWifiListeners.end(); it++)
     {
-        if(listener == *it)
+        if (listener == *it)
         {
             mWifiListeners.erase(it);
             return;
@@ -430,7 +430,7 @@ void WifiManager::processEvent(const char* str)
     if (strncmp(str, "CTRL-EVENT-CONNECTED", 20) == 0)
     {
         Lock lock(mMutex);
-        for(WifiListenerList::iterator it = mWifiListeners.begin(); it != mWifiListeners.end(); it++)
+        for (WifiListenerList::iterator it = mWifiListeners.begin(); it != mWifiListeners.end(); it++)
             (*it)->onWifiConnected();
     }
     else if (strncmp(str, "CTRL-EVENT-DISCONNECTED", 23) == 0)
@@ -439,7 +439,7 @@ void WifiManager::processEvent(const char* str)
         reason = getReason(str);
 
         Lock lock(mMutex);
-        for(WifiListenerList::iterator it = mWifiListeners.begin(); it != mWifiListeners.end(); it++)
+        for (WifiListenerList::iterator it = mWifiListeners.begin(); it != mWifiListeners.end(); it++)
         {
             (*it)->onWifiDisconnected(reason);
         }
@@ -447,7 +447,7 @@ void WifiManager::processEvent(const char* str)
     else if (strncmp(str, "CTRL-EVENT-SCAN-STARTED", 23) == 0)
     {
         Lock lock(mMutex);
-        for(WifiListenerList::iterator it = mWifiListeners.begin(); it != mWifiListeners.end(); it++)
+        for (WifiListenerList::iterator it = mWifiListeners.begin(); it != mWifiListeners.end(); it++)
             (*it)->onWifiScanStarted();
     }
     else if (strncmp(str, "CTRL-EVENT-SCAN-RESULTS", 23) == 0)
@@ -455,7 +455,7 @@ void WifiManager::processEvent(const char* str)
         scanResults(mDeviceList);
 
         Lock lock(mMutex);
-        for(WifiListenerList::iterator it = mWifiListeners.begin(); it != mWifiListeners.end(); it++)
+        for (WifiListenerList::iterator it = mWifiListeners.begin(); it != mWifiListeners.end(); it++)
             (*it)->onWifiScanCompleted(mDeviceList);
     }
 }
@@ -476,14 +476,14 @@ __TRACE__
         ret = poll(&sPollFd, 1, 100);
         if (ret > 0)
         {
-            if(sPollFd.revents & (POLLRDHUP | POLLERR | POLLHUP | POLLNVAL))
+            if (sPollFd.revents & (POLLRDHUP | POLLERR | POLLHUP | POLLNVAL))
                 break;
 
             if (sPollFd.revents & POLLIN)
             {
                 read(sPollFd.fd, line, sizeof(line));
                 char* p = line;
-                if(line[0] == '<')
+                if (line[0] == '<')
                     p = strchr(p + 1, '>') + 1;
 
                 //LOGD("%s", p);
@@ -497,7 +497,7 @@ __TRACE__
 bool WifiManager::startSupplicant()
 {
     int pid = ProcessUtil::get_pid_from_proc_by_name(WPA_SUPPLICANT);
-    if(pid < 0)
+    if (pid < 0)
     {
         ProcessUtil::system(WPA_SUPPLICANT_START);
     }
@@ -519,15 +519,15 @@ bool WifiManager::connectSupplicant()
     sprintf(ctrl_path, "%s/%s", CTRL_IFACE_DIR, WIFI_INTF);
 
     /* W/A code. Wait until to make unix domain socket for IPC */
-    for(ii = 0; ii < 1000; ii++)
+    for (ii = 0; ii < 1000; ii++)
     {
-        if(::access(ctrl_path, F_OK) == 0)
+        if (::access(ctrl_path, F_OK) == 0)
             break;
 
         usleep(10 * 1000);
     }
 
-    if(ii == 1000)
+    if (ii == 1000)
     {
         LOGE("Failed to find ctrl_path : %s", ctrl_path);
         return false;
@@ -535,14 +535,14 @@ bool WifiManager::connectSupplicant()
     /* W/A */
 
     mCtrlConn = wpa_ctrl_open(ctrl_path);
-    if(mCtrlConn == NULL)
+    if (mCtrlConn == NULL)
     {
         LOGE("Cannot open ctrl interface : %s", ctrl_path);
         return false;
     }
 
     mMonitorConn = wpa_ctrl_open(ctrl_path);
-    if(mMonitorConn == NULL)
+    if (mMonitorConn == NULL)
     {
         LOGE("Cannot open monitor interface : %s", ctrl_path);
         wpa_ctrl_close(mCtrlConn);
@@ -557,13 +557,13 @@ bool WifiManager::connectSupplicant()
 
 void WifiManager::disconnectSupplicant()
 {
-    if(mMonitorConn)
+    if (mMonitorConn)
     {
         wpa_ctrl_detach(mMonitorConn);
         wpa_ctrl_close(mMonitorConn);
     }
 
-    if(mCtrlConn)
+    if (mCtrlConn)
         wpa_ctrl_close(mCtrlConn);
 }
 
@@ -573,7 +573,7 @@ __TRACE__
     char* tok, * saveptr;
     char buf[4*1024];
 
-    if(!sendWpaCtrlCommand("STATUS", buf, sizeof(buf)))
+    if (!sendWpaCtrlCommand("STATUS", buf, sizeof(buf)))
     {
         LOGE("Cannot get status");
         return false;
@@ -584,7 +584,7 @@ __TRACE__
         char* value = strchr(tok, '=') + 1;
         if (strncmp(tok, "wpa_state", 9) == 0)
         {
-            if(strncmp(value, "COMPLETED", 9) == 0)
+            if (strncmp(value, "COMPLETED", 9) == 0)
                 return true;
         }
     }
@@ -600,7 +600,7 @@ bool WifiManager::scan()
     if (!sendWpaCtrlCommand("SCAN", buf, sizeof(buf)))
         return false;
 
-    if(strncmp(buf, "OK", 2) != 0)
+    if (strncmp(buf, "OK", 2) != 0)
     {
         LOGE("Failed to scan : %s", buf);
         return false;
@@ -616,7 +616,7 @@ void WifiManager::scanResults(std::vector<WifiDevice*>& list)
 
     std::vector<WifiDevice*>().swap(mDeviceList);
 
-    if(sendWpaCtrlCommand("SCAN_RESULTS", buf, sizeof(buf)))
+    if (sendWpaCtrlCommand("SCAN_RESULTS", buf, sizeof(buf)))
     {
         tok = strtok_r(buf, "\r\n", &saveptr);
         for (tok = strtok_r(NULL, "\r\n", &saveptr); tok; tok = strtok_r(NULL, "\r\n", &saveptr))
@@ -656,7 +656,7 @@ const char* WifiManager::getReason(const char* str)
     strcpy(disconnStr, str);
 
     char* reason = strstr(disconnStr, "reason=");
-    if(reason != NULL)
+    if (reason != NULL)
     {
         reason = strtok(reason, "=");
         reason = strtok(NULL, " ");
@@ -673,7 +673,7 @@ int  WifiManager::listNetwork()
     char* tok, * saveptr;
 
     int n = -1;
-    if(sendWpaCtrlCommand("LIST_NETWORKS", buf, sizeof(buf)))
+    if (sendWpaCtrlCommand("LIST_NETWORKS", buf, sizeof(buf)))
     {
         for (tok = strtok_r(buf, "\r\n", &saveptr); tok; tok = strtok_r(NULL, "\r\n", &saveptr))
             n++;
@@ -696,7 +696,7 @@ bool WifiManager::addNetwork()
             removeNetwork(i);
     }
 
-    if(sendWpaCtrlCommand("ADD_NETWORK", buf, sizeof(buf)))
+    if (sendWpaCtrlCommand("ADD_NETWORK", buf, sizeof(buf)))
     {
         return true;
     }
@@ -716,7 +716,7 @@ bool WifiManager::setSSID(const char* ssid)
         return false;
     }
 
-    if(strncmp(buf, "OK", 2) != 0)
+    if (strncmp(buf, "OK", 2) != 0)
         return false;
 
     return true;
@@ -734,7 +734,7 @@ bool WifiManager::setScanSsid(int val)
         return false;
     }
 
-    if(strncmp(buf, "OK", 2) != 0)
+    if (strncmp(buf, "OK", 2) != 0)
         return false;
 
     return true;
@@ -752,7 +752,7 @@ bool WifiManager::setKeyMgmt(const char* keyMgmt)
         return false;
     }
 
-    if(strncmp(buf, "OK", 2) != 0)
+    if (strncmp(buf, "OK", 2) != 0)
         return false;
 
     return true;
@@ -770,7 +770,7 @@ bool WifiManager::setSAE(const char* pwd)
         return false;
     }
 
-    if(strncmp(buf, "OK", 2) != 0)
+    if (strncmp(buf, "OK", 2) != 0)
         return false;
 
     return true;
@@ -788,7 +788,7 @@ bool WifiManager::setCommand(const char* cmd)
         return false;
     }
 
-    if(strncmp(buf, "OK", 2) != 0)
+    if (strncmp(buf, "OK", 2) != 0)
         return false;
 
     return true;
@@ -807,7 +807,7 @@ bool WifiManager::setProto(const char* proto)
         return false;
     }
 
-    if(strncmp(buf, "OK", 2) != 0)
+    if (strncmp(buf, "OK", 2) != 0)
         return false;
 
     return true;
@@ -825,7 +825,7 @@ bool WifiManager::setPairwise(const char* pairwise)
         return false;
     }
 
-    if(strncmp(buf, "OK", 2) != 0)
+    if (strncmp(buf, "OK", 2) != 0)
         return false;
 
     return true;
@@ -843,7 +843,7 @@ bool WifiManager::setGroup(const char* group)
         return false;
     }
 
-    if(strncmp(buf, "OK", 2) != 0)
+    if (strncmp(buf, "OK", 2) != 0)
         return false;
 
     return true;
@@ -861,7 +861,7 @@ bool WifiManager::setPsk(const char* psk)
         return false;
     }
 
-    if(strncmp(buf, "OK", 2) != 0)
+    if (strncmp(buf, "OK", 2) != 0)
         return false;
 
     return true;
@@ -877,7 +877,7 @@ bool WifiManager::enableNetwork(int networkNum)
 
     sendWpaCtrlCommand(cmd, buf, sizeof(buf));
 
-    if(strncmp(buf, "OK", 2) != 0)
+    if (strncmp(buf, "OK", 2) != 0)
         return false;
 
     return true;
@@ -920,13 +920,13 @@ bool WifiManager::setCountry(const char* country)
 
     sprintf(cmd, "SET country %s", country);
 
-    if(!sendWpaCtrlCommand(cmd, buf, sizeof(buf)))
+    if (!sendWpaCtrlCommand(cmd, buf, sizeof(buf)))
     {
         LOGE("Failed to set country US");
         return false;
     }
 
-    if(strncmp(buf, "OK", 2) != 0)
+    if (strncmp(buf, "OK", 2) != 0)
         return false;
 
     return true;
@@ -939,13 +939,13 @@ bool WifiManager::setApScan(int value)
 
     sprintf(cmd, "AP_SCAN %d", value);
 
-    if(!sendWpaCtrlCommand(cmd, buf, sizeof(buf)))
+    if (!sendWpaCtrlCommand(cmd, buf, sizeof(buf)))
     {
         LOGE("Failed to ap scan");
         return false;
     }
 
-    if(strncmp(buf, "OK", 2) != 0)
+    if (strncmp(buf, "OK", 2) != 0)
         return false;
 
     return true;

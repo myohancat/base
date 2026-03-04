@@ -13,9 +13,9 @@
 
 char* ltrim(char *s)
 {
-    if(!s) return s;
+    if (!s) return s;
 
-    while(IS_SPACE(*s)) s++;
+    while (IS_SPACE(*s)) s++;
 
     return s;
 }
@@ -24,11 +24,11 @@ char* rtrim(char* s)
 {
     char* back;
 
-    if(!s) return s;
+    if (!s) return s;
 
     back = s + strlen(s);
 
-    while((s <= --back) && IS_SPACE(*back));
+    while ((s <= --back) && IS_SPACE(*back));
     *(back + 1)    = '\0';
 
     return s;
@@ -60,30 +60,30 @@ int parse_ini(FILE* file, fnIniCB cb, void* param)
         start = line;
         start = ltrim(rtrim(start));
 
-        if(*start == ';' || *start == '#')
+        if (*start == ';' || *start == '#')
             continue;
 
-        if(*start == '[')
+        if (*start == '[')
         {
             end = strchr(start + 1, ']');
-            if(*end == ']')
+            if (*end == ']')
             {
                 *end = '\0';
                 strncpy(section, start + 1, MAX_SECTION_LEN);
                 section[MAX_SECTION_LEN - 1] = 0;
             }
-            else if(!error)
+            else if (!error)
             {
                 error  = lineno;
                 errmsg = "missing \']\'";
             }
         }
-        else if(*start)
+        else if (*start)
         {
             end = strchr(start, '=');
-            if(!end) end = strchr(start, ':');
+            if (!end) end = strchr(start, ':');
 
-            if(end)
+            if (end)
             {
                 *end = '\0';
                 name = rtrim(start);
@@ -104,19 +104,19 @@ int parse_ini(FILE* file, fnIniCB cb, void* param)
                 {
                     // remove comment
                     end = strchr(value, '#');
-                    if(!end) end = strchr(value, ';');
-                    if(end) *end = '\0';
+                    if (!end) end = strchr(value, ';');
+                    if (end) *end = '\0';
                 }
 
                 rtrim(value);
-                if(cb(param, section, name, value) < 0)
+                if (cb(param, section, name, value) < 0)
                 {
                     error = lineno;
                     errmsg = "handler is failed.";
                     break;
                 }
             }
-            else if(!error)
+            else if (!error)
             {
                 error = lineno;
                 errmsg = "cannot find \'=:\' for value.";
@@ -124,7 +124,7 @@ int parse_ini(FILE* file, fnIniCB cb, void* param)
             }
         }
 
-        if(error)
+        if (error)
         {
             LOGE("Parsing is failed ! line : %d  reason : %s", lineno, errmsg);
             break;
@@ -144,7 +144,7 @@ void parse_key_value_str(const char* str, KeyValueCB_Fn cb, void* userdat)
     strncpy(buf, str, MAX_STR_LEN);
     buf[MAX_STR_LEN -1] = 0;
 
-    while(*p)
+    while (*p)
     {
         if (!key)
         {
@@ -152,17 +152,17 @@ void parse_key_value_str(const char* str, KeyValueCB_Fn cb, void* userdat)
             if (*p == 0) continue;
             key = p++;
         }
-        else if(!value)
+        else if (!value)
         {
             while (*p && *p != '=' && !IS_SPACE(*p)) p++;
             if (*p == '=')
             {
                 *p++ = 0;
                 value = p;
-                if(IS_QUOTE(*value))
+                if (IS_QUOTE(*value))
                 {
                     p++;
-                    while(*p && *value != *p) p++;
+                    while (*p && *value != *p) p++;
                 }
             }
         }

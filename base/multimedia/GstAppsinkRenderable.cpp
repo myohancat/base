@@ -9,6 +9,11 @@
 #include "RenderService.h"
 #include "GstHelper.h"
 
+#include <gst/gl/gl.h>
+#include <gst/gl/gstglmemory.h>
+#include <gst/gl/egl/gstglmemoryegl.h>
+#include <gst/gl/egl/gstgldisplay_egl.h>
+
 #include <sstream>
 
 #define _GST_OBJ_UNREF(x)   if (x != NULL) { \

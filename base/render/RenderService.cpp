@@ -113,7 +113,7 @@ __TRACE__
 
     int index = -1;
     Msg msg;
-    while(!mExitTask)
+    while (!mExitTask)
     {
         if (!mMsgQ.get(&msg, -1))
             continue;
@@ -143,7 +143,7 @@ __TRACE__
                     bool forceToDraw = msg.arg;
                     bool isNeedToDraw = false;
 
-                    for(RendererList::iterator it = mRenderers.begin(); it != mRenderers.end(); it++)
+                    for (RendererList::iterator it = mRenderers.begin(); it != mRenderers.end(); it++)
                     {
                         if ((*it)->isNeedToDraw())
                         {
@@ -171,7 +171,7 @@ __TRACE__
                 glClear(GL_COLOR_BUFFER_BIT);
 
                 mRendererLock.lock();
-                for(RendererList::iterator it = mRenderers.begin(); it != mRenderers.end(); it++)
+                for (RendererList::iterator it = mRenderers.begin(); it != mRenderers.end(); it++)
                     (*it)->onDrawFrame();
                 mRendererLock.unlock();
 
@@ -184,7 +184,7 @@ __TRACE__
                     if (mOnDisplayRenderer)
                         mOnDisplayRenderer->update(fbos[index]->dmabuf(), DRM_FORMAT_RGB888, OFFSCREEN_WIDTH, OFFSCREEN_HEIGHT);
 
-                    for(ObserverList::iterator it = mObservers.begin(); it != mObservers.end(); it++)
+                    for (ObserverList::iterator it = mObservers.begin(); it != mObservers.end(); it++)
                         (*it)->onRenderCompleted(fbos[index]->dmabuf(), DRM_FORMAT_RGB888, OFFSCREEN_WIDTH, OFFSCREEN_HEIGHT);
                 }
                 break;
@@ -193,7 +193,7 @@ __TRACE__
     }
 
     mRendererLock.lock();
-    for(RendererList::iterator it = mRenderers.begin(); it != mRenderers.end(); it++)
+    for (RendererList::iterator it = mRenderers.begin(); it != mRenderers.end(); it++)
         (*it)->onSurfaceRemoved();
     mRendererLock.unlock();
 
@@ -308,11 +308,11 @@ void RenderService::addRenderer(IRenderable* renderer)
 __TRACE__
     Lock lock(mRendererLock);
 
-    if(!renderer)
+    if (!renderer)
         return;
 
     RendererList::iterator it = std::find(mRenderers.begin(), mRenderers.end(), renderer);
-    if(it != mRenderers.end())
+    if (it != mRenderers.end())
         return;
 
     mRenderers.push_back(renderer);
@@ -327,12 +327,12 @@ __TRACE__
 void RenderService::removeRenderer(IRenderable* renderer)
 {
     Lock lock(mRendererLock);
-    if(!renderer)
+    if (!renderer)
         return;
 
-    for(RendererList::iterator it = mRenderers.begin(); it != mRenderers.end(); it++)
+    for (RendererList::iterator it = mRenderers.begin(); it != mRenderers.end(); it++)
     {
-        if(renderer == *it)
+        if (renderer == *it)
         {
             mRenderers.erase(it);
             mRenderers.sort(IRenderable::compare);
@@ -350,11 +350,11 @@ void RenderService::addRenderObserver(IRenderObserver* observer)
 {
     Lock lock(mRendererLock);
 
-    if(!observer)
+    if (!observer)
         return;
 
     ObserverList::iterator it = std::find(mObservers.begin(), mObservers.end(), observer);
-    if(it != mObservers.end())
+    if (it != mObservers.end())
     {
         LOGW("RenderObserver is alreay exsit !!");
         return;
@@ -367,12 +367,12 @@ void RenderService::removeRenderObserver(IRenderObserver* observer)
 {
     Lock lock(mRendererLock);
 
-    if(!observer)
+    if (!observer)
         return;
 
-    for(ObserverList::iterator it = mObservers.begin(); it != mObservers.end(); it++)
+    for (ObserverList::iterator it = mObservers.begin(); it != mObservers.end(); it++)
     {
-        if(observer == *it)
+        if (observer == *it)
         {
             mObservers.erase(it);
             return;

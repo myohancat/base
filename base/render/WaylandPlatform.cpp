@@ -22,11 +22,11 @@ static const char* get_wayland_display(const char* path)
     DIR* dir = opendir(path);
     struct dirent* de;
 
-    while((de = readdir(dir)))
+    while ((de = readdir(dir)))
     {
-        if(de->d_name[0] == '.')
+        if (de->d_name[0] == '.')
         {
-            if(de->d_name[1] == '\0' || (de->d_name[1] == '.' && de->d_name[2] == '\0'))
+            if (de->d_name[1] == '\0' || (de->d_name[1] == '.' && de->d_name[2] == '\0'))
                 continue;
         }
 
@@ -59,11 +59,11 @@ static void set_weston_evironment()
             continue;
 
         struct dirent* de;
-        while((de = readdir(dir)))
+        while ((de = readdir(dir)))
         {
-            if(de->d_name[0] == '.')
+            if (de->d_name[0] == '.')
             {
-                if(de->d_name[1] == '\0' || (de->d_name[1] == '.' && de->d_name[2] == '\0'))
+                if (de->d_name[1] == '\0' || (de->d_name[1] == '.' && de->d_name[2] == '\0'))
                     continue;
             }
             sprintf(path, "%s/%s", base_dirs[ii], de->d_name);

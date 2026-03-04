@@ -55,7 +55,7 @@ static void release_id(int id)
 static bool is_scsi_disk(const char* name)
 {
     // sd[a~z][1~9]
-    if(strlen(name) < 3 || strncmp(name, "sd", 2) || !isalpha(*(name + 2)))
+    if (strlen(name) < 3 || strncmp(name, "sd", 2) || !isalpha(*(name + 2)))
         return false;
 
     if (strlen(name) > 4 && !isdigit(*(name+3)))
@@ -76,7 +76,7 @@ static bool get_fstype(const char* name, char* fstype)
         return ret;
 
     int index = 0;
-    while(fgets(line, sizeof(line), fp))
+    while (fgets(line, sizeof(line), fp))
     {
         if (index == 1)
         {
@@ -151,7 +151,7 @@ static void umount_all()
         return;
 
     int prefixLen = strlen(MOUNT_PREFIX);
-    while(fgets(line, sizeof(line), fp))
+    while (fgets(line, sizeof(line), fp))
     {
         char* p = strstr(line, "on");
         p = ltrim(p + 2);
@@ -174,7 +174,7 @@ static int get_usb_disk_list(std::vector<std::string>& devList)
     if (!fp)
         return 0;
 
-    while(fgets(line ,sizeof(line), fp))
+    while (fgets(line ,sizeof(line), fp))
     {
         int major, minor, block;
         char name[1024];
@@ -201,13 +201,13 @@ static const char* get_mount_dir(const char* dev, char* mount_dir)
         return 0;
 
     sprintf(path, "/dev/%s", dev);
-    while(fgets(line ,sizeof(line), fp))
+    while (fgets(line ,sizeof(line), fp))
     {
         char _path[1024];
         char _mountDir[1024];
         if (sscanf(line, "%s %s", _path, _mountDir) == 2)
         {
-            if(strcmp(path, _path) == 0)
+            if (strcmp(path, _path) == 0)
             {
                 strcpy(mount_dir, _mountDir);
                 fclose(fp);
@@ -244,7 +244,7 @@ bool UsbStorageManager::addListener(IUsbStorageListener* listener)
 {
     Lock lock(mLock);
 
-    if(!listener)
+    if (!listener)
         return false;
 
     std::list<IUsbStorageListener*>::iterator it = std::find(mListeners.begin(), mListeners.end(), listener);
@@ -263,10 +263,10 @@ void UsbStorageManager::removeListener(IUsbStorageListener* listener)
 {
     Lock lock(mLock);
 
-    if(!listener)
+    if (!listener)
         return;
 
-    for(std::list<IUsbStorageListener*>::iterator it = mListeners.begin(); it != mListeners.end(); it++)
+    for (std::list<IUsbStorageListener*>::iterator it = mListeners.begin(); it != mListeners.end(); it++)
     {
         if (listener == *it)
         {
@@ -339,7 +339,7 @@ void UsbStorageManager::run()
 {
     UsbMessage msg;
 
-    while(!mExitTask)
+    while (!mExitTask)
     {
         if (mMsgQ.get(&msg))
         {
@@ -363,7 +363,7 @@ void UsbStorageManager::run()
                             {
                                 Lock lock(mLock);
                                 mMountPoints[name] = id;
-                                for(std::list<IUsbStorageListener*>::iterator it = mListeners.begin(); it != mListeners.end(); it++)
+                                for (std::list<IUsbStorageListener*>::iterator it = mListeners.begin(); it != mListeners.end(); it++)
                                     (*it)->onUsbStorageAdded(name, mount_point);
                             }
                             else
@@ -383,7 +383,7 @@ void UsbStorageManager::run()
 
                     Lock lock(mLock);
                     mMountPoints.erase(name);
-                    for(std::list<IUsbStorageListener*>::iterator it = mListeners.begin(); it != mListeners.end(); it++)
+                    for (std::list<IUsbStorageListener*>::iterator it = mListeners.begin(); it != mListeners.end(); it++)
                         (*it)->onUsbStorageRemoved(name, mount_point);
                 }
             }
@@ -409,7 +409,7 @@ void UsbStorageManager::onHotplugChanged(UsbHotplugEvent_e event, const char* de
             UsbMessage msg(MSG_ID_USB_ADD, strdup(p));
             mMsgQ.put(msg);
         }
-        else if(event == USB_HOTPLUG_EVENT_REMOVE)
+        else if (event == USB_HOTPLUG_EVENT_REMOVE)
         {
             LOGI("Removed : %s", p);
             UsbMessage msg(MSG_ID_USB_REMOVE, strdup(p));

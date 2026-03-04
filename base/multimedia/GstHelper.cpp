@@ -23,11 +23,164 @@ void initialize()
 
     if (!_initialized)
     {
-        EGLHelper::initialize();
-
         gst_init(NULL, NULL);
         _initialized = true;
     }
+}
+
+EGLImage create_egl_image_from_dmabuf(int dmabuf_fd, GstVideoInfo* info)
+{
+    int width  = GST_VIDEO_INFO_WIDTH(info);
+    int height = GST_VIDEO_INFO_HEIGHT(info);
+    GstVideoFormat vfmt = GST_VIDEO_INFO_FORMAT(info);
+
+    EGLint fourcc = -1;
+    switch(vfmt)
+    {
+        case GST_VIDEO_FORMAT_RGBA:
+            fourcc = DRM_FORMAT_ABGR8888; // TODO
+            break;
+        case GST_VIDEO_FORMAT_BGR:
+            fourcc = DRM_FORMAT_RGB888; // TODO
+            break;
+        case GST_VIDEO_FORMAT_NV12:
+            fourcc = DRM_FORMAT_NV12;
+            break;
+        case GST_VIDEO_FORMAT_NV16:
+            fourcc = DRM_FORMAT_NV16;
+            break;
+#if 0 /* TODO. rk3588 does not support NV24 for EGL */
+        case GST_VIDEO_FORMAT_NV24:
+            fourcc = DRM_FORMAT_NV24;
+            break;
+#endif
+        default:
+            LOGE("Meta format Unsupported format : %04X", vfmt);
+            return EGL_NO_IMAGE;
+    }
+
+    EGLint attr[6 + 6*(MAX_NUM_PLANES) + 1] =
+    {
+        EGL_WIDTH,  (EGLint)width,
+        EGL_HEIGHT, (EGLint)height,
+        EGL_LINUX_DRM_FOURCC_EXT, fourcc
+    };
+
+    int ii = 6;
+    attr[ii++] = EGL_DMA_BUF_PLANE0_FD_EXT;
+    attr[ii++] = dmabuf_fd;
+    attr[ii++] = EGL_DMA_BUF_PLANE0_OFFSET_EXT;
+    attr[ii++] = info->offset[0];
+    attr[ii++] = EGL_DMA_BUF_PLANE0_PITCH_EXT;
+    attr[ii++] = info->stride[0];
+#ifdef ENABLE_DUMP_ATTR
+    LOGD("From Meta");
+    LOGD("%c%c%c%c %dx%d", fourcc & 0xFF, (fourcc >> 8) & 0xFF, (fourcc >> 16) & 0xFF, (fourcc >> 24) & 0xFF, info->width, info->height);
+    LOGD("[0] offset:%d, stride: %d", info->offset[0], info->stride[0]);
+#endif
+
+    int n_planes = GST_VIDEO_INFO_N_PLANES(info);
+    if (n_planes > 1)
+    {
+        attr[ii++] = EGL_DMA_BUF_PLANE1_FD_EXT;
+        attr[ii++] = dmabuf_fd;
+        attr[ii++] = EGL_DMA_BUF_PLANE1_OFFSET_EXT;
+        attr[ii++] = info->offset[1];
+        attr[ii++] = EGL_DMA_BUF_PLANE1_PITCH_EXT;
+        attr[ii++] = info->stride[1];
+#ifdef ENABLE_DUMP_ATTR
+        LOGD("[1] offset:%d, stride: %d", info->offset[1], info->stride[1]);
+#endif
+    }
+    attr[ii] = EGL_NONE;
+
+    EGLDisplay display = RenderService::getInstance().getDisplay();
+    if (display == EGL_NO_DISPLAY)
+    {
+        LOGE("Cannot get EGLDisplay");
+        return EGL_NO_IMAGE;
+    }
+
+    EGLImageKHR image = eglCreateImageKHR(display, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, NULL, attr);
+    if (image == EGL_NO_IMAGE)
+        LOGE("Cannot create image. format : %04X, %dx%d", fourcc, info->width, info->height);
+
+    return image;
+}
+
+EGLImage create_egl_image_from_dmabuf(int dmabuf_fd, GstVideoMeta* meta)
+{
+    EGLint fourcc = -1;
+    switch(meta->format)
+    {
+        case GST_VIDEO_FORMAT_RGBA:
+            fourcc = DRM_FORMAT_ABGR8888; // TODO
+            break;
+        case GST_VIDEO_FORMAT_BGR:
+            fourcc = DRM_FORMAT_RGB888; // TODO
+            break;
+        case GST_VIDEO_FORMAT_NV12:
+            fourcc = DRM_FORMAT_NV12;
+            break;
+        case GST_VIDEO_FORMAT_NV16:
+            fourcc = DRM_FORMAT_NV16;
+            break;
+#if 0 /* TODO. rk3588 does not support NV24 for EGL */
+        case GST_VIDEO_FORMAT_NV24:
+            fourcc = DRM_FORMAT_NV24;
+            break;
+#endif
+        default:
+            LOGE("Meta format Unsupported format : %04X", meta->format);
+            return EGL_NO_IMAGE;
+    }
+
+    EGLint attr[6 + 6*(MAX_NUM_PLANES) + 1] =
+    {
+        EGL_WIDTH,  (EGLint)meta->width,
+        EGL_HEIGHT, (EGLint)meta->height,
+        EGL_LINUX_DRM_FOURCC_EXT, fourcc
+    };
+
+    int ii = 6;
+    attr[ii++] = EGL_DMA_BUF_PLANE0_FD_EXT;
+    attr[ii++] = dmabuf_fd;
+    attr[ii++] = EGL_DMA_BUF_PLANE0_OFFSET_EXT;
+    attr[ii++] = meta->offset[0];
+    attr[ii++] = EGL_DMA_BUF_PLANE0_PITCH_EXT;
+    attr[ii++] = meta->stride[0];
+#ifdef ENABLE_DUMP_ATTR
+    LOGD("From Meta");
+    LOGD("%c%c%c%c %dx%d", fourcc & 0xFF, (fourcc >> 8) & 0xFF, (fourcc >> 16) & 0xFF, (fourcc >> 24) & 0xFF, meta->width, meta->height);
+    LOGD("[0] offset:%d, stride: %d", meta->offset[0], meta->stride[0]);
+#endif
+
+    if (meta->n_planes > 1)
+    {
+        attr[ii++] = EGL_DMA_BUF_PLANE1_FD_EXT;
+        attr[ii++] = dmabuf_fd;
+        attr[ii++] = EGL_DMA_BUF_PLANE1_OFFSET_EXT;
+        attr[ii++] = meta->offset[1];
+        attr[ii++] = EGL_DMA_BUF_PLANE1_PITCH_EXT;
+        attr[ii++] = meta->stride[1];
+#ifdef ENABLE_DUMP_ATTR
+        LOGD("[1] offset:%d, stride: %d", meta->offset[1], meta->stride[1]);
+#endif
+    }
+    attr[ii] = EGL_NONE;
+
+    EGLDisplay display = RenderService::getInstance().getDisplay();
+    if (display == EGL_NO_DISPLAY)
+    {
+        LOGE("Cannot get EGLDisplay");
+        return EGL_NO_IMAGE;
+    }
+
+    EGLImageKHR image = eglCreateImageKHR(display, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, NULL, attr);
+    if (image == EGL_NO_IMAGE)
+        LOGE("Cannot create image. format : %04X, %dx%d", fourcc, meta->width, meta->height);
+
+    return image;
 }
 
 EGLImageKHR create_egl_image_from_dmabuf(GstMemory* mem, const char* format, int width, int height)
@@ -131,102 +284,15 @@ EGLImageKHR create_egl_image_from_dmabuf(GstMemory* mem, const char* format, int
         return EGL_NO_IMAGE;
     }
 
-    EGLImageKHR image = EGL_NO_IMAGE;
-    image = eglCreateImageKHR(display, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, NULL, attr);
+    EGLImageKHR image = eglCreateImageKHR(display, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, NULL, attr);
     if (image == EGL_NO_IMAGE)
         LOGE("Cannot create image. format : %04X, %dx%d", fourcc, width, height);
 
     return image;
 }
 
-EGLImageKHR create_egl_image_from_dmabuf(int dmabuf_fd, GstVideoMeta* meta)
-{
-    EGLint fourcc = -1;
-    switch(meta->format)
-    {
-        case GST_VIDEO_FORMAT_RGBA:
-            fourcc = DRM_FORMAT_ABGR8888; // TODO
-            break;
-        case GST_VIDEO_FORMAT_BGR:
-            fourcc = DRM_FORMAT_RGB888; // TODO
-            break;
-        case GST_VIDEO_FORMAT_NV12:
-            fourcc = DRM_FORMAT_NV12;
-            break;
-        case GST_VIDEO_FORMAT_NV16:
-            fourcc = DRM_FORMAT_NV16;
-            break;
-#if 0 /* TODO. rk3588 does not support NV24 for EGL */
-        case GST_VIDEO_FORMAT_NV24:
-            fourcc = DRM_FORMAT_NV24;
-            break;
-#endif
-        default:
-            LOGE("Meta format Unsupported format : %04X", meta->format);
-            return EGL_NO_IMAGE;
-    }
-
-    EGLint attr[6 + 6*(MAX_NUM_PLANES) + 1] =
-    {
-        EGL_WIDTH,  (EGLint)meta->width,
-        EGL_HEIGHT, (EGLint)meta->height,
-        EGL_LINUX_DRM_FOURCC_EXT, fourcc
-    };
-
-    int ii = 6;
-    attr[ii++] = EGL_DMA_BUF_PLANE0_FD_EXT;
-    attr[ii++] = dmabuf_fd;
-    attr[ii++] = EGL_DMA_BUF_PLANE0_OFFSET_EXT;
-    attr[ii++] = meta->offset[0];
-    attr[ii++] = EGL_DMA_BUF_PLANE0_PITCH_EXT;
-    attr[ii++] = meta->stride[0];
-#ifdef ENABLE_DUMP_ATTR
-    LOGD("From Meta");
-    LOGD("%c%c%c%c %dx%d", fourcc & 0xFF, (fourcc >> 8) & 0xFF, (fourcc >> 16) & 0xFF, (fourcc >> 24) & 0xFF, meta->width, meta->height);
-    LOGD("[0] offset:%d, stride: %d", meta->offset[0], meta->stride[0]);
-#endif
-
-    if (meta->n_planes > 1)
-    {
-        attr[ii++] = EGL_DMA_BUF_PLANE1_FD_EXT;
-        attr[ii++] = dmabuf_fd;
-        attr[ii++] = EGL_DMA_BUF_PLANE1_OFFSET_EXT;
-        attr[ii++] = meta->offset[1];
-        attr[ii++] = EGL_DMA_BUF_PLANE1_PITCH_EXT;
-        attr[ii++] = meta->stride[1];
-#ifdef ENABLE_DUMP_ATTR
-        LOGD("[1] offset:%d, stride: %d", meta->offset[1], meta->stride[1]);
-#endif
-    }
-    attr[ii] = EGL_NONE;
-
-    EGLDisplay display = RenderService::getInstance().getDisplay();
-    if (display == EGL_NO_DISPLAY)
-    {
-        LOGE("Cannot get EGLDisplay");
-        return EGL_NO_IMAGE;
-    }
-
-    EGLImageKHR image = EGL_NO_IMAGE;
-    image = eglCreateImageKHR(display, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, NULL, attr);
-    if (image == EGL_NO_IMAGE)
-        LOGE("Cannot create image. format : %04X, %dx%d", fourcc, meta->width, meta->height);
-
-    return image;
-}
-
 void destroy_egl_image(EGLImageKHR image)
 {
-    EGLDisplay display = RenderService::getInstance().getDisplay();
-    if (display == EGL_NO_DISPLAY)
-    {
-        LOGE("Cannot get EGLDisplay");
-        return;
-    }
-
-    if (image == EGL_NO_IMAGE)
-        return;
-
     eglDestroyImageKHR(RenderService::getInstance().getDisplay(), image);
 }
 

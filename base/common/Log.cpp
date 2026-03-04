@@ -16,8 +16,8 @@
 static LOG_LEVEL_e  gLogLevel = LOG_LEVEL_TRACE;
 static bool gLogWithTime = true;
 
-#define LOCK_LOG_OUT()    do { } while(0)
-#define UNLOCK_LOG_OUT()  do { } while(0)
+#define LOCK_LOG_OUT()    do { } while (0)
+#define UNLOCK_LOG_OUT()  do { } while (0)
 
 #ifdef __cplusplus
 extern "C"
@@ -36,7 +36,7 @@ const char* simplify_function(char* buf, const char* func)
 
     begin = NULL;
     p = buf;
-    while((p = strchr(p, ' '))) { begin = p; p++; }
+    while ((p = strchr(p, ' '))) { begin = p; p++; }
     if (begin) begin++;
     else begin = buf;
 
@@ -76,7 +76,7 @@ void LOG_Print(int priority, const char* color, const char* fmt, ...)
     va_list ap;
     FILE* fp;
 
-    if(priority > gLogLevel)
+    if (priority > gLogLevel)
         return;
 
     fp = output_device();
@@ -85,10 +85,10 @@ void LOG_Print(int priority, const char* color, const char* fmt, ...)
 
     fp = output_device();
 
-    if(color)
+    if (color)
         fputs(color, fp);
 
-    if(gLogWithTime)
+    if (gLogWithTime)
     {
         char timestr[32];
         fputs(cur_time_str(timestr), fp);
@@ -98,7 +98,7 @@ void LOG_Print(int priority, const char* color, const char* fmt, ...)
     vfprintf(fp, fmt, ap);
     va_end(ap);
 
-    if(color)
+    if (color)
         fputs(ANSI_COLOR_RESET, fp);
 
     fflush(fp);
@@ -116,14 +116,14 @@ void LOG_Dump(int priority, const void* ptr, int size)
     int offset = 0;
     const unsigned char* data = (const unsigned char*)ptr;
 
-    if(priority > gLogLevel)
+    if (priority > gLogLevel)
         return;
 
     LOCK_LOG_OUT();
 
     fp = output_device();
 
-    while(offset < size)
+    while (offset < size)
     {
         char* p = buffer;
         int remain = size - offset;
@@ -131,15 +131,15 @@ void LOG_Dump(int priority, const void* ptr, int size)
         n = sprintf(p, "0x%04x  ", offset);
         p += n;
 
-        if(remain > 16)
+        if (remain > 16)
             remain = 16;
 
-        for(ii = 0; ii < 16; ii++)
+        for (ii = 0; ii < 16; ii++)
         {
-            if(ii == 8)
+            if (ii == 8)
                 strcpy(p++, " ");
 
-            if(offset + ii < size)
+            if (offset + ii < size)
                n = sprintf(p, "%02x ", data[offset + ii]);
             else
                n = sprintf(p, "   ");
@@ -148,9 +148,9 @@ void LOG_Dump(int priority, const void* ptr, int size)
         }
 
         strcpy(p++, " ");
-        for(ii = 0; ii < remain; ii++)
+        for (ii = 0; ii < remain; ii++)
         {
-            if(ISPRINTABLE(data[offset + ii]))
+            if (ISPRINTABLE(data[offset + ii]))
                 sprintf(p++, "%c", data[offset + ii]);
             else
                 strcpy(p++, ".");

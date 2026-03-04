@@ -112,10 +112,10 @@ RawNV12Renderer::RawNV12Renderer(float alpha, ColorMode_e eMode)
 
 RawNV12Renderer::~RawNV12Renderer()
 {
-    if(mTextureIdY != (GLuint)-1)
+    if (mTextureIdY != (GLuint)-1)
         glDeleteTextures(1, &mTextureIdY);
 
-    if(mTextureIdUV != (GLuint)-1)
+    if (mTextureIdUV != (GLuint)-1)
 
     glDeleteProgram(mProgram);
     // TODO. IMPLEMENTS HERE

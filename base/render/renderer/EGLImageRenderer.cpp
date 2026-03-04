@@ -95,7 +95,7 @@ EGLImageRenderer::EGLImageRenderer(float alpha, ColorMode_e eMode)
 
 EGLImageRenderer::~EGLImageRenderer()
 {
-    if(mTexture != (GLuint)-1)
+    if (mTexture != (GLuint)-1)
         glDeleteTextures(1, &mTexture);
 
     glDeleteProgram(mProgram);

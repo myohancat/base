@@ -34,11 +34,11 @@ void MainLoop::addFdWatcher(IFdWatcher* watcher)
 {
     Lock lock(mFdWatcherLock);
 
-    if(!watcher)
+    if (!watcher)
         return;
 
     FdWatcherList::iterator it = std::find(mFdWatchers.begin(), mFdWatchers.end(), watcher);
-    if(it != mFdWatchers.end())
+    if (it != mFdWatchers.end())
     {
         LOGE("FdWatcher is alreay exist !!");
         return;
@@ -51,12 +51,12 @@ void MainLoop::removeFdWatcher(IFdWatcher* watcher)
 {
     Lock lock(mFdWatcherLock);
 
-    if(!watcher)
+    if (!watcher)
         return;
 
-    for(FdWatcherList::iterator it = mFdWatchers.begin(); it != mFdWatchers.end(); it++)
+    for (FdWatcherList::iterator it = mFdWatchers.begin(); it != mFdWatchers.end(); it++)
     {
-        if(*it == watcher)
+        if (*it == watcher)
         {
             mFdWatchers.erase(it);
             return;
@@ -68,11 +68,11 @@ void MainLoop::addTimer(Timer* timer)
 {
     Lock lock(mTimerLock);
 
-    if(!timer)
+    if (!timer)
         return;
 
     TimerList::iterator it = std::find(mTimers.begin(), mTimers.end(), timer);
-    if(it != mTimers.end())
+    if (it != mTimers.end())
     {
         LOGE("timer is alreay exsit !!");
         return;
@@ -86,12 +86,12 @@ void MainLoop::removeTimer(Timer* timer)
 {
     Lock lock(mTimerLock);
 
-    if(!timer)
+    if (!timer)
         return;
 
-    for(TimerList::iterator it = mTimers.begin(); it != mTimers.end(); it++)
+    for (TimerList::iterator it = mTimers.begin(); it != mTimers.end(); it++)
     {
-        if(*it == timer)
+        if (*it == timer)
         {
             mTimers.erase(it);
             mTimers.sort(timer_sort);
@@ -108,30 +108,30 @@ uint32_t MainLoop::runTimers()
 
     int32_t timeout = WAIT_TIME;
 
-    if(mTimers.size())
+    if (mTimers.size())
     {
         uint64_t now    = SysTime::getTickCountMs();
         uint64_t expiry = mTimers.front()->getExpiry();
-        if(expiry <= now)
+        if (expiry <= now)
         {
             Timer* timer = mTimers.front();
-            if(!mTimers.front()->execute())
+            if (!mTimers.front()->execute())
             {
-                if(timer == mTimers.front())
+                if (timer == mTimers.front())
                     mTimers.pop_front();
             }
 
             mTimers.sort(timer_sort);
-            if(mTimers.size())
+            if (mTimers.size())
                 timeout = mTimers.front()->getExpiry() - now;
         }
         else
             timeout = expiry - now;
     }
 
-    if(timeout < 0)
+    if (timeout < 0)
         timeout = 0;
-    else if(timeout > WAIT_TIME)
+    else if (timeout > WAIT_TIME)
         timeout = WAIT_TIME;
 
     return timeout;
@@ -151,36 +151,36 @@ bool MainLoop::loop()
     FD_SET(mPipe[0], &sReadFds);
 
     mFdWatcherLock.lock();
-    for(FdWatcherList::iterator it = mFdWatchers.begin(); it != mFdWatchers.end(); it++)
+    for (FdWatcherList::iterator it = mFdWatchers.begin(); it != mFdWatchers.end(); it++)
     {
         nLastFd = MAX((*it)->getFD(), nLastFd);
         FD_SET((*it)->getFD(), &sReadFds);
     }
     mFdWatcherLock.unlock();
 
-    if(nLastFd < 0)
+    if (nLastFd < 0)
         return false;
 
     nLastFd++;
 
-    while(runFunctions()) { }; // Execute Post Functions
+    while (runFunctions()) { }; // Execute Post Functions
 
-    while((timeToWait = runTimers()) == 0) { } // Execute Timers
+    while ((timeToWait = runTimers()) == 0) { } // Execute Timers
 
     sWait.tv_sec  = timeToWait / 1000;
     sWait.tv_usec = (timeToWait % 1000) * 1000;
 
     nCnt = select(nLastFd, &sReadFds, NULL, NULL, &sWait);
 
-    if(nCnt == 0)
+    if (nCnt == 0)
     {
         /* TIMEOUT OCCURED */
         return true;
     }
 
-    if(nCnt == -1)
+    if (nCnt == -1)
     {
-        if(errno == EINTR)
+        if (errno == EINTR)
         {
             /* INTERRUPT RECEIVED */
             return true;
@@ -189,10 +189,10 @@ bool MainLoop::loop()
         return false;
     }
 
-    if(FD_ISSET(mPipe[0], &sReadFds))
+    if (FD_ISSET(mPipe[0], &sReadFds))
     {
         char cCmd;
-        if(read(mPipe[0], &cCmd, 1) < 0)
+        if (read(mPipe[0], &cCmd, 1) < 0)
         {
             LOGE("pipe read failed !");
             return true;
@@ -212,9 +212,9 @@ bool MainLoop::loop()
     }
 
     mFdWatcherLock.lock();
-    for(FdWatcherList::iterator it = mFdWatchers.begin(); it != mFdWatchers.end(); it++)
+    for (FdWatcherList::iterator it = mFdWatchers.begin(); it != mFdWatchers.end(); it++)
     {
-        if(FD_ISSET((*it)->getFD(), &sReadFds))
+        if (FD_ISSET((*it)->getFD(), &sReadFds))
         {
             (*it)->onFdReadable((*it)->getFD());
         }
@@ -256,20 +256,20 @@ bool MainLoop::runFunctions()
 
 void MainLoop::wakeup()
 {
-    if(mPipe[1] >= 0)
+    if (mPipe[1] >= 0)
         write(mPipe[1], "S", 1);
 }
 
 void MainLoop::terminate()
 {
-    if(mPipe[1] >= 0)
+    if (mPipe[1] >= 0)
         write(mPipe[1], "T", 1);
 }
 
 MainLoop::MainLoop()
 {
     /* for stop command */
-    if(pipe(mPipe) < 0)
+    if (pipe(mPipe) < 0)
     {
         LOGE("cannot create pipe !");
     }

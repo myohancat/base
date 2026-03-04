@@ -375,7 +375,7 @@ int recvfrom(int sock, char* ipaddr, int iplen, void *buf, size_t len, int timeo
 int socket_set_blocking(int sock, bool block)
 {
     int flags = fcntl(sock, F_GETFL, 0);
-    if(block)
+    if (block)
         flags = flags & (O_NONBLOCK ^ 0xFFFFFFFF);
     else
         flags |= O_NONBLOCK;
@@ -480,20 +480,20 @@ int get_link_state(const char* ifname, bool* isUP)
 
     sprintf(path, "/sys/class/net/%s/operstate", ifname);
     file = fopen(path, "r");
-    if(!file)
+    if (!file)
         return -1;
 
     memset(data, 0x00, sizeof(data));
-    if(fgets(data, sizeof(data), file) == NULL)
+    if (fgets(data, sizeof(data), file) == NULL)
     {
         fclose(file);
         return -2;
     }
 
     trim(data);
-    if(strcmp(data, "up") == 0)
+    if (strcmp(data, "up") == 0)
         *isUP = true;
-    else if(strcmp(data, "down") == 0)
+    else if (strcmp(data, "down") == 0)
         *isUP = false;
     else
     {
@@ -515,11 +515,11 @@ int get_cable_state(const char* ifname, bool* isPlugged)
 
     sprintf(path, "/sys/class/net/%s/carrier", ifname);
     file = fopen(path, "r");
-    if(!file)
+    if (!file)
         return -1;
 
     memset(data, 0x00, sizeof(data));
-    if(fgets(data, sizeof(data), file) == NULL)
+    if (fgets(data, sizeof(data), file) == NULL)
     {
         fclose(file);
         return -2;
@@ -539,14 +539,14 @@ int get_mac_addr(const char* ifname, MacAddr_t* mac)
     memset(mac, 0x00, sizeof(MacAddr_t));
 
     sock = socket(AF_INET, SOCK_DGRAM, 0);
-    if(sock < 0)
+    if (sock < 0)
     {
         LOGE("cannot open socket !");
         return -1;
     }
 
     strncpy(req.ifr_name, ifname, IFNAMSIZ);
-    if(ioctl(sock, SIOCGIFHWADDR, &req) < 0)
+    if (ioctl(sock, SIOCGIFHWADDR, &req) < 0)
     {
         LOGE("cannot get mac address");
         close(sock);
@@ -571,14 +571,14 @@ int get_ip_addr(const char* ifname, char* ipaddr)
     ipaddr[0] = 0;
 
     fd = socket(AF_INET, SOCK_DGRAM, 0);
-    if(fd == -1)
+    if (fd == -1)
     {
         LOGE("cannot oepn socket. !");
         return -1;
     }
 
     strncpy(req.ifr_name, ifname, IFNAMSIZ);
-    if(ioctl(fd, SIOCGIFADDR, &req) == 0)
+    if (ioctl(fd, SIOCGIFADDR, &req) == 0)
     {
         sin = (struct sockaddr_in*)&req.ifr_addr;
         strcpy(ipaddr, inet_ntoa(sin->sin_addr));
@@ -602,14 +602,14 @@ int get_netmask(const char* ifname, char* netmask)
     netmask[0] = 0;
 
     fd = socket(AF_INET, SOCK_DGRAM, 0);
-    if(fd == -1)
+    if (fd == -1)
     {
         LOGE("cannot oepn socket. !");
         return -1;
     }
 
     strncpy(req.ifr_name, ifname, IFNAMSIZ);
-    if(ioctl(fd, SIOCGIFNETMASK, &req) == 0)
+    if (ioctl(fd, SIOCGIFNETMASK, &req) == 0)
     {
         sin = (struct sockaddr_in*)&req.ifr_netmask;
         strcpy(netmask, inet_ntoa(sin->sin_addr));
@@ -635,19 +635,19 @@ int get_default_gateway(char* default_gw, char *interface)
     memset(buf, 0, sizeof(buf));
 
     file = fopen("/proc/net/route", "r");
-    if(!file)
+    if (!file)
         return -1;
 
-    while(fgets(buf, sizeof(buf), file))
+    while (fgets(buf, sizeof(buf), file))
     {
-        if(sscanf(buf, "%s %lx %lx", iface, &destination, &gateway) == 3)
+        if (sscanf(buf, "%s %lx %lx", iface, &destination, &gateway) == 3)
         {
-            if(destination == 0) /* default */
+            if (destination == 0) /* default */
             {
                 struct in_addr addr;
                 addr.s_addr = gateway;
                 strcpy(default_gw, inet_ntoa(addr));
-                if(interface)
+                if (interface)
                     strcpy(interface, iface);
 
                 fclose(file);

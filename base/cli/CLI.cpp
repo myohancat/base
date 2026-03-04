@@ -92,11 +92,11 @@ static int make_args(const char* command, char*** pargv)
     strncpy(buf, command, MAX_READ_LINE_LEN -1);
     buf[MAX_READ_LINE_LEN -1] = 0;
 
-    while(*p)
+    while (*p)
     {
         if (!start)
         {
-            while(isspace(*p)) p++;
+            while (isspace(*p)) p++;
             if (*p == 0) break;
             start = p;
         }
@@ -104,13 +104,13 @@ static int make_args(const char* command, char*** pargv)
         {
             if (!IS_QUOTE(*start))
             {
-                while(*p && !isspace(*p)) p++;
+                while (*p && !isspace(*p)) p++;
                 if (*p == 0) end = p-1;
                 else { end = p - 1; *p = 0; }
             }
             else
             {
-                while(*p && *start != *p) p++;
+                while (*p && *start != *p) p++;
                 if (*p == 0) end = p-1;
                 else { start ++; end = p - 1; *p = 0; }
             }
@@ -143,7 +143,7 @@ static void free_args(char** argv)
     if (!argv)
         return;
 
-    for(ii = 0; argv[ii]; ii++)
+    for (ii = 0; argv[ii]; ii++)
         free(argv[ii]);
 
     free(argv);
@@ -205,7 +205,7 @@ void CLI::onTcpSessionEstablished(TcpSession* session)
 
     // Flush Response
     NetUtil::recv(session->getFD(), line, 1, RECV_TIMEOUT);
-    if(line[0] == (char)-1) // TODO
+    if (line[0] == (char)-1) // TODO
     {
         int rc = read(session->getFD(), line, sizeof(line));
         // TODO
@@ -255,7 +255,7 @@ void CLI::onTcpSessionReadable(TcpSession* session)
         {
             char** argv = NULL;
             int argc = make_args(telnetSession->getLine(), &argv);
-            if(argv)
+            if (argv)
             {
                 Lock lock(mLock);
                 auto it = mCmdMap.find(argv[0]);
@@ -421,7 +421,7 @@ void TelnetSession::doInsertChars(const char* charIn, int charInCnt)
         NetUtil::send(fd, szBack, moveLen, SEND_TIMEOUT);
 
         #if 0
-        for(nIdx = 0; nIdx< nMoveLen; nIdx++)
+        for (nIdx = 0; nIdx< nMoveLen; nIdx++)
             fwrite(nSock, &cBack, 1);
         #endif
         mCaretPos += charInCnt;
@@ -434,16 +434,16 @@ void TelnetSession::doErase(int eraseCnt)
     int fd = mSession->getFD();
     char szErase[MAX_READ_LINE_LEN];
 
-    if(eraseCnt == 0)
+    if (eraseCnt == 0)
         return;
 
-    if(mCharCnt <= 0)
+    if (mCharCnt <= 0)
         return;
 
-    if(mCaretPos < eraseCnt)
+    if (mCaretPos < eraseCnt)
         return;
 
-    if(mCaretPos < mCharCnt) // Middle of Line
+    if (mCaretPos < mCharCnt) // Middle of Line
     {
         char* curPos = mLine + mCaretPos;
         char* targetPos = curPos - eraseCnt;
@@ -465,7 +465,7 @@ void TelnetSession::doErase(int eraseCnt)
     }
     else
     {
-        for(int ii = 0; ii < eraseCnt; ii++)
+        for (int ii = 0; ii < eraseCnt; ii++)
             NetUtil::send(fd, ERASE_CHAR, 3, SEND_TIMEOUT);
 
         mCaretPos -= eraseCnt;
@@ -482,13 +482,13 @@ void TelnetSession::doDelete(int deleteCnt)
     char* curPos = mLine + mCaretPos;
     int   remain = mCharCnt - mCaretPos;
 
-    if(deleteCnt == 0)
+    if (deleteCnt == 0)
         return;
 
-    if(remain == 0)
+    if (remain == 0)
         return;
 
-    if(remain < deleteCnt)
+    if (remain < deleteCnt)
         deleteCnt = remain;
 
     memmove(curPos, curPos + deleteCnt, remain - deleteCnt);
@@ -536,7 +536,7 @@ void TelnetSession::doMoveLeft()
 
     char cBack = '\b';
 
-    if(mCaretPos <= 0)
+    if (mCaretPos <= 0)
         return;
 
     mCaretPos--;
@@ -547,7 +547,7 @@ void TelnetSession::doMoveRight()
 {
     int fd = mSession->getFD();
 
-    if(mCaretPos >= mCharCnt)
+    if (mCaretPos >= mCharCnt)
         return;
 
     NetUtil::send(fd, &mLine[mCaretPos], 1, SEND_TIMEOUT);

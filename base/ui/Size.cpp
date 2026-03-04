@@ -45,7 +45,7 @@ void Size::setHeight(int height)
 
 Size& Size::operator=(const Size& size)
 {
-    if(this != &size)
+    if (this != &size)
     {
         mWidth = size.mWidth;
         mHeight = size.mHeight;

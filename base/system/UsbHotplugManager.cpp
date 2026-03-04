@@ -34,7 +34,7 @@ UsbHotplugManager::UsbHotplugManager()
     struct sockaddr_nl addr;
 
     mSock = socket(PF_NETLINK, SOCK_RAW, NETLINK_KOBJECT_UEVENT);
-    if(mSock < 0)
+    if (mSock < 0)
     {
         LOGE("socket error (%d) - %s", errno, strerror(errno));
         exit(-2);
@@ -44,7 +44,7 @@ UsbHotplugManager::UsbHotplugManager()
     addr.nl_family = AF_NETLINK;
     addr.nl_groups = RTMGRP_LINK;
 
-    if(bind(mSock, (struct sockaddr*)&addr, sizeof(addr)) < 0)
+    if (bind(mSock, (struct sockaddr*)&addr, sizeof(addr)) < 0)
     {
         LOGE("bind failed (%d) - %s", errno, strerror(errno));
         exit(-2);
@@ -57,7 +57,7 @@ UsbHotplugManager::~UsbHotplugManager()
 {
     MainLoop::getInstance().removeFdWatcher(this);
 
-    if(mSock >= 0)
+    if (mSock >= 0)
         close(mSock);
 }
 
@@ -93,22 +93,22 @@ bool UsbHotplugManager::onFdReadable(int fd)
     };
 
     ret = recvmsg(fd, &msg, 0);
-    if(ret < 0)
+    if (ret < 0)
         return true;
 
-    if(ret == 0)
+    if (ret == 0)
     {
         LOGE("EOF on netlink");
         return false;
     }
 
-    if(msg.msg_namelen != sizeof(nladdr))
+    if (msg.msg_namelen != sizeof(nladdr))
     {
         LOGE("Wrong address length");
         return true;
     }
 
-    if(iov.iov_len < ((size_t)ret) || (msg.msg_flags & MSG_TRUNC))
+    if (iov.iov_len < ((size_t)ret) || (msg.msg_flags & MSG_TRUNC))
     {
         LOGE("Malformatted or truncated message, skipping");
         return true;
@@ -118,7 +118,7 @@ bool UsbHotplugManager::onFdReadable(int fd)
     //LOGT("==> %s", buf);
     action = buf;
     devpath = strchr(buf, '@');
-    if(devpath == NULL)
+    if (devpath == NULL)
         return true;
 
     *devpath = 0;
@@ -127,11 +127,11 @@ bool UsbHotplugManager::onFdReadable(int fd)
     if (strncmp(devpath, "/devices", 8))
         return true;
 
-    if(strcmp(action, "add") == 0)
+    if (strcmp(action, "add") == 0)
         eEvent = USB_HOTPLUG_EVENT_ADD;
-    else if(strcmp(action, "change") == 0)
+    else if (strcmp(action, "change") == 0)
         eEvent = USB_HOTPLUG_EVENT_CHANGE;
-    else if(strcmp(action, "remove") == 0)
+    else if (strcmp(action, "remove") == 0)
         eEvent = USB_HOTPLUG_EVENT_REMOVE;
     else
         eEvent = USB_HOTPLUG_EVENT_UNKNOWN;
@@ -146,7 +146,7 @@ void UsbHotplugManager::notifyHotplugEvent(UsbHotplugEvent_e eEvent, const char*
     int count = mListeners.size();
     int ii;
 
-    for(ii = 0; ii < count; ii++)
+    for (ii = 0; ii < count; ii++)
     {
         mListeners[ii]->onHotplugChanged(eEvent, devPath);
     }
@@ -162,13 +162,13 @@ void UsbHotplugManager::removeListener(IUsbHotplugListener* listener)
     int count = mListeners.size();
     int ii;
 
-    for(ii = 0; ii < count; ii++)
+    for (ii = 0; ii < count; ii++)
     {
-        if(mListeners[ii] == listener)
+        if (mListeners[ii] == listener)
             break;
     }
 
-    if(ii < count)
+    if (ii < count)
         mListeners.erase(mListeners.begin() + ii);
 }
 

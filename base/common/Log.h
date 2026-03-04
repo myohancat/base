@@ -65,37 +65,37 @@ const char* simplify_function(char* buf, const char* func);
 
 #define CHECK(fmt, args...)      do { \
                                          LOG_Print(LOG_LEVEL_NONE, ANSI_COLOR_BOLD ANSI_COLOR_BIRHGT_CYAN, fmt CRLF, ##args); \
-                                     } while(0)
+                                     } while (0)
 
 #define PRINT(fmt, args...)      do { \
                                          LOG_Print(LOG_LEVEL_NONE, ANSI_COLOR_NONE, fmt CRLF, ##args); \
-                                     } while(0)
+                                     } while (0)
 
 #define LOGT(fmt, args...)      do { \
                                          LOG_Print(LOG_LEVEL_TRACE, ANSI_COLOR_GRAY, fmt CRLF, ##args); \
-                                     } while(0)
+                                     } while (0)
 
 #define LOGD(fmt, args...)      do { \
                                          LOG_Print(LOG_LEVEL_DEBUG, ANSI_COLOR_NONE, fmt CRLF, ##args); \
-                                     } while(0)
+                                     } while (0)
 
 #define LOGI(fmt, args...)       do { \
                                          char tmp[MAX_FUNCION_SIZE]; \
                                          const char* func = simplify_function(tmp, __PRETTY_FUNCTION__); \
                                          LOG_Print(LOG_LEVEL_INFO, ANSI_COLOR_YELLOW, "[%s:%d] %s() " fmt CRLF, __BASE_FILE_NAME__, __LINE__, func, ##args); \
-                                     } while(0)
+                                     } while (0)
 
 #define LOGW(fmt, args...)      do { \
                                          char tmp[MAX_FUNCION_SIZE]; \
                                          const char* func = simplify_function(tmp, __PRETTY_FUNCTION__); \
                                          LOG_Print(LOG_LEVEL_WARN, ANSI_COLOR_BOLD, "[%s:%d] %s() " fmt CRLF, __BASE_FILE_NAME__, __LINE__, func, ##args); \
-                                     } while(0)
+                                     } while (0)
 
 #define LOGE(fmt, args...)      do { \
                                          char tmp[MAX_FUNCION_SIZE]; \
                                          const char* func = simplify_function(tmp, __PRETTY_FUNCTION__); \
                                          LOG_Print(LOG_LEVEL_ERROR, ANSI_COLOR_BOLD ANSI_COLOR_RED, "[%s:%d] %s() " fmt CRLF, __BASE_FILE_NAME__, __LINE__, func, ##args); \
-                                     } while(0)
+                                     } while (0)
 
 #ifdef __cplusplus
 class AutoFunctionTrace

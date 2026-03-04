@@ -43,7 +43,7 @@ DisplayHotplugManager::DisplayHotplugManager()
     struct sockaddr_nl addr;
 
     mSock = socket(PF_NETLINK, SOCK_RAW, NETLINK_KOBJECT_UEVENT);
-    if(mSock < 0)
+    if (mSock < 0)
     {
         LOGE("socket error (%d) - %s", errno, strerror(errno));
         exit(-2);
@@ -54,7 +54,7 @@ DisplayHotplugManager::DisplayHotplugManager()
     addr.nl_pid    = getpid();
     addr.nl_groups = 1;
 
-    if(bind(mSock, (struct sockaddr*)&addr, sizeof(addr)) < 0)
+    if (bind(mSock, (struct sockaddr*)&addr, sizeof(addr)) < 0)
     {
         LOGE("bind failed (%d) - %s", errno, strerror(errno));
         exit(-2);
@@ -99,22 +99,22 @@ bool DisplayHotplugManager::onFdReadable(int fd)
     };
 
     ret = recvmsg(fd, &msg, 0);
-    if(ret < 0)
+    if (ret < 0)
         return true;
 
-    if(ret == 0)
+    if (ret == 0)
     {
         LOGE("EOF on netlink");
         return false;
     }
 
-    if(msg.msg_namelen != sizeof(nladdr))
+    if (msg.msg_namelen != sizeof(nladdr))
     {
         LOGE("Wrong address length");
         return true;
     }
 
-    if(iov.iov_len < ((size_t)ret) || (msg.msg_flags & MSG_TRUNC))
+    if (iov.iov_len < ((size_t)ret) || (msg.msg_flags & MSG_TRUNC))
     {
         LOGE("Malformatted or truncated message, skipping");
         return true;
@@ -122,7 +122,7 @@ bool DisplayHotplugManager::onFdReadable(int fd)
 
     buf[ret] = 0;
     devpath = strchr(buf, '@');
-    if(devpath == NULL)
+    if (devpath == NULL)
         return true;
 
     //LOGD("%s", devpath);
@@ -168,11 +168,11 @@ bool DisplayHotplugManager::isPlugged(const char* devpath)
         return false;
 
     struct dirent* de;
-    while((de = readdir(dir)))
+    while ((de = readdir(dir)))
     {
-        if(de->d_name[0] == '.')
+        if (de->d_name[0] == '.')
         {
-            if(de->d_name[1] == '\0' || (de->d_name[1] == '.' && de->d_name[2] == '\0'))
+            if (de->d_name[1] == '\0' || (de->d_name[1] == '.' && de->d_name[2] == '\0'))
                     continue;
         }
 
@@ -217,7 +217,7 @@ void DisplayHotplugManager::notifyHotplugEvent(const char* devpath)
     bool plugged= isPlugged(devpath);
 
     mListenerLock.lock();
-    for(ListenerList::iterator it = mListeners.begin(); it != mListeners.end(); it++)
+    for (ListenerList::iterator it = mListeners.begin(); it != mListeners.end(); it++)
     {
         if (plugged)
             (*it)->onDisplayPlugged();
@@ -231,11 +231,11 @@ void DisplayHotplugManager::addListener(IDisplayHotplugListener* listener)
 {
     Lock lock(mListenerLock);
 
-    if(!listener)
+    if (!listener)
         return;
 
     ListenerList::iterator it = std::find(mListeners.begin(), mListeners.end(), listener);
-    if(it != mListeners.end())
+    if (it != mListeners.end())
     {
         LOGW("Listener is alreay exsit !!");
         return;
@@ -248,12 +248,12 @@ void DisplayHotplugManager::removeListener(IDisplayHotplugListener* listener)
 {
     Lock lock(mListenerLock);
 
-    if(!listener)
+    if (!listener)
         return;
 
-    for(ListenerList::iterator it = mListeners.begin(); it != mListeners.end(); it++)
+    for (ListenerList::iterator it = mListeners.begin(); it != mListeners.end(); it++)
     {
-        if(listener == *it)
+        if (listener == *it)
         {
             mListeners.erase(it);
             return;

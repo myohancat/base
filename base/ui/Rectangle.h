@@ -108,7 +108,7 @@ inline int Rectangle::getHeight() const
 
 inline bool Rectangle::isValid() const
 {
-    if(mWidth > 0 && mHeight > 0)
+    if (mWidth > 0 && mHeight > 0)
         return true;
 
     return false;

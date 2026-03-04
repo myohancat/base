@@ -56,7 +56,7 @@ void Pipe::flush()
     /* W/A Code for Flush */
     uint8_t dummy[1024];
     int value;
-    while(ioctl(mFds[0], FIONREAD, &value) == 0 && value > 0)
+    while (ioctl(mFds[0], FIONREAD, &value) == 0 && value > 0)
         ::read(mFds[0], dummy, sizeof(dummy));
 }
 
