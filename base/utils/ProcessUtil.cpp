@@ -146,7 +146,7 @@ int kill_force(const char* process)
 
 static bool _is_exist_process(int pid)
 {
-    if (kill(pid, 0) == 0)
+    if (::kill(pid, 0) == 0)
         return true;
 
     if (errno == EPERM)
