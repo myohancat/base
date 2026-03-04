@@ -46,7 +46,7 @@ DisplayHotplugManager::DisplayHotplugManager()
     if (mSock < 0)
     {
         LOGE("socket error (%d) - %s", errno, strerror(errno));
-        exit(-2);
+        return;
     }
 
     memset(&addr, 0x00, sizeof(addr));
@@ -57,7 +57,7 @@ DisplayHotplugManager::DisplayHotplugManager()
     if (bind(mSock, (struct sockaddr*)&addr, sizeof(addr)) < 0)
     {
         LOGE("bind failed (%d) - %s", errno, strerror(errno));
-        exit(-2);
+        return;
     }
 
     MainLoop::getInstance().addFdWatcher(this);
@@ -176,7 +176,8 @@ bool DisplayHotplugManager::isPlugged(const char* devpath)
                     continue;
         }
 
-        if (strncmp(de->d_name, "card0-HDMI-A", 12) != 0 && strncmp(de->d_name, "card1-HDMI-A", 12) != 0)
+        if (strncmp(de->d_name, "card", 4)      // skip not cardX
+            || strstr(de->d_name, "Writeback")) // skip cardX-Writeback-X
             continue;
 
         plugged |= isPlugged(path, de->d_name);
@@ -193,7 +194,7 @@ bool DisplayHotplugManager::isPlugged(const char* syspath, const char* subpath)
 {
     char path[2048];
     char line[1024];
-    sprintf(path, "%s/%s/status", syspath, subpath);
+    snprintf(path, sizeof(path), "%s/%s/status", syspath, subpath);
 
     bool connected = true;
     FILE* fp = fopen(path, "r");
