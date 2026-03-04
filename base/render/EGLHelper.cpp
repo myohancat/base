@@ -5,6 +5,15 @@
  */
 #include "EGLHelper.h"
 
+#include <sys/ioctl.h>
+#include <linux/dma-heap.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <linux/dma-buf.h>
+#include <sys/ioctl.h>
+
 #include "RenderService.h"
 #include "Log.h"
 
@@ -148,15 +157,6 @@ void destroy_egl_image(EGLImageKHR image, EGLDisplay display)
     eglDestroyImageKHR(display, image);
 }
 
-#include <sys/ioctl.h>
-#include <linux/dma-heap.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <linux/dma-buf.h>
-#include <sys/ioctl.h>
-
 int get_dma_buf_size(uint32_t format, int width, int height)
 {
     int stride, size;
@@ -259,7 +259,7 @@ DmabufSync::~DmabufSync()
     if (mFD < 0) return;
 
     struct dma_buf_sync sync = {0};
-    sync.flags = DMA_BUF_SYNC_END | DMA_BUF_SYNC_READ;
+    sync.flags = DMA_BUF_SYNC_END;
 
     if (mNeedToRead) sync.flags  |= DMA_BUF_SYNC_READ;
     if (mNeedToWrite) sync.flags |= DMA_BUF_SYNC_WRITE;
