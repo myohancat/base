@@ -145,7 +145,7 @@ void IRQ::run()
             char data;
             mPipe.read(&data, 1);
 
-            switch(data)
+            switch (data)
             {
                 case 'D':
                     setEdge(GPIO_EDGE_NONE);

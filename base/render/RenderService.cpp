@@ -118,7 +118,7 @@ __TRACE__
         if (!mMsgQ.get(&msg, -1))
             continue;
 
-        switch(msg.what)
+        switch (msg.what)
         {
             case MSG_ID_ADD_RENDERER:
             {

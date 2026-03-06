@@ -188,7 +188,7 @@ void Canvas::clear(const Rectangle& rect, const Color& color)
 
 SkBlendMode Canvas::convBlendMode(BlendMode_e eMode)
 {
-    switch(eMode)
+    switch (eMode)
     {
         case BLEND_MODE_CLEAR:    return SkBlendMode::kClear;
         case BLEND_MODE_SRC:      return SkBlendMode::kSrc;

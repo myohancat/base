@@ -47,7 +47,7 @@ void Window::WindowEventQueue::onEventReceived(int id, void* data, int dataLen)
 {
     UNUSED(dataLen);
 
-    switch(id)
+    switch (id)
     {
         case CONTAINER_REQUEST_SHOW:
         {

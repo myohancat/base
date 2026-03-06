@@ -35,7 +35,7 @@ EGLImage create_egl_image_from_dmabuf(int dmabuf_fd, GstVideoInfo* info)
     GstVideoFormat vfmt = GST_VIDEO_INFO_FORMAT(info);
 
     EGLint fourcc = -1;
-    switch(vfmt)
+    switch (vfmt)
     {
         case GST_VIDEO_FORMAT_RGBA:
             fourcc = DRM_FORMAT_ABGR8888; // TODO
@@ -111,7 +111,7 @@ EGLImage create_egl_image_from_dmabuf(int dmabuf_fd, GstVideoInfo* info)
 EGLImage create_egl_image_from_dmabuf(int dmabuf_fd, GstVideoMeta* meta)
 {
     EGLint fourcc = -1;
-    switch(meta->format)
+    switch (meta->format)
     {
         case GST_VIDEO_FORMAT_RGBA:
             fourcc = DRM_FORMAT_ABGR8888; // TODO

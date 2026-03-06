@@ -39,7 +39,7 @@ UART* UART::open(const char* dev, int baudrate)
     tcgetattr(fd, &old); // save current port setting.
 
     //set new port settings
-    switch(baudrate)
+    switch (baudrate)
     {
         case 9600:
             tio.c_cflag = B9600;

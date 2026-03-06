@@ -27,7 +27,7 @@ namespace NetUtil
 int socket(SockType_e type)
 {
     int sock = -1;
-    switch(type)
+    switch (type)
     {
         case SOCK_TYPE_TCP:
             sock = ::socket(AF_INET, SOCK_STREAM, 0);

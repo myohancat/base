@@ -55,7 +55,7 @@ EGLImageKHR create_egl_image(int dmabuf_fd, int format, int width, int height, E
     int offsets[MAX_NUM_PLANES] { 0, };
     int strides[MAX_NUM_PLANES] { 0, };
 
-    switch(format)
+    switch (format)
     {
         case DRM_FORMAT_RGBA8888:
         case DRM_FORMAT_ABGR8888:
@@ -161,7 +161,7 @@ int get_dma_buf_size(uint32_t format, int width, int height)
 {
     int stride, size;
 
-    switch(format)
+    switch (format)
     {
         case DRM_FORMAT_RGBA8888:
         case DRM_FORMAT_ABGR8888:

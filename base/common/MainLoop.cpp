@@ -198,7 +198,7 @@ bool MainLoop::loop()
             return true;
         }
 
-        switch(cCmd)
+        switch (cCmd)
         {
             case 'T':
                 LOGI(">> terminated recieved.");

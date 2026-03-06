@@ -556,7 +556,7 @@ void TelnetSession::doMoveRight()
 
 void TelnetSession::processVKey(const VKey_t* vkey)
 {
-    switch(vkey->mCode)
+    switch (vkey->mCode)
     {
         case VKEY_CODE_CHAR:
             doInsertChars(&vkey->mValue, 1);

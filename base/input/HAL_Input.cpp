@@ -172,7 +172,7 @@ int HAL_Input_GetKeyCode(int deviceId, int rawKeyCode)
     KeyMap_t* customKeyMap     = NULL;
     int       customKeyMapSize = 0;
 
-    switch(deviceId)
+    switch (deviceId)
     {
         case INPUT_DEVICE_FOOT_PEDAL:
             customKeyMap      = KEYMAP_FOOT_PEDAL;

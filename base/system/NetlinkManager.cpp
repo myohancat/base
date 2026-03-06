@@ -132,7 +132,7 @@ bool NetlinkManager::onFdReadable(int fd)
         if (hdr->nlmsg_type == NLMSG_DONE)
             return true;
 
-        switch(hdr->nlmsg_type)
+        switch (hdr->nlmsg_type)
         {
             case RTM_NEWROUTE:
             case RTM_DELROUTE:
