@@ -31,6 +31,7 @@ SRCS      += Log.cpp
 SRCS      += ByteRingBuffer.cpp
 SRCS      += SysTime.cpp
 SRCS      += Timer.cpp
+SRCS      += TimerTask.cpp
 SRCS      += Task.cpp
 SRCS      += MainLoop.cpp
 

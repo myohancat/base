@@ -19,7 +19,7 @@
  * proteted:
  *     void run() override
  *     {
- *         while(isRunning())
+ *         while (shouldRun())
  *         {
  *             // TODO
  *             msleep(1000);
@@ -58,7 +58,7 @@ public:
 
     void wakeup();
 
-    bool isRunning();
+    bool shouldRun();
 
 protected:
     virtual void run() = 0; // MUST IMPLEMENT.
@@ -98,7 +98,7 @@ inline void Task::sleep(int sec)
     msleep(sec * 1000);
 }
 
-inline bool Task::isRunning()
+inline bool Task::shouldRun()
 {
     std::lock_guard<std::mutex> lock(mLock);
 
