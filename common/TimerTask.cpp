@@ -1,8 +1,8 @@
 /**
- * My Base Code
- * c wrapper class for developing embedded system.
+ * My simple base code
+ * for developing embedded system.
  *
- * author: Kyungyin.Kim < myohancat@naver.com >
+ * author: Kyungin.Kim < myohancat@naver.com >
  */
 #include "TimerTask.h"
 
