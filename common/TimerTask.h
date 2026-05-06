@@ -29,8 +29,6 @@ public:
 private:
     ITimerHandler*  mHandler;
 
-    bool     mExitTask;
-
     bool     mRepeat;
     uint64_t mStartTime;
     int      mIntervalMs;

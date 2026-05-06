@@ -12,12 +12,11 @@
 
 
 TimerTask::TimerTask()
-          : Task("TimerTask")
+          : Task("TimerTask"),
+            mRepeat(false),
+            mIntervalMs(0),
+            mHandler(nullptr)
 {
-    mExitTask   = false;
-    mRepeat     = false;
-    mIntervalMs = 0;
-    mHandler    = NULL;
 }
 
 TimerTask::~TimerTask()
@@ -37,7 +36,6 @@ void TimerTask::start(uint32_t msec, bool repeat)
     mRepeat     = repeat;
     mStartTime  = SysTime::getTickCountMs();
     mIntervalMs = msec;
-    mExitTask   = false;
 
     if (!Task::start())
     {
@@ -47,7 +45,6 @@ void TimerTask::start(uint32_t msec, bool repeat)
 
 void TimerTask::stop()
 {
-    mExitTask = true;
     Task::stop();
 }
 
