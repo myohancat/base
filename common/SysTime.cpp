@@ -29,7 +29,7 @@ uint64_t SysTime::getCurrentTime()
     return duration_cast<milliseconds>(now.time_since_epoch()).count();
 }
 
-void SysTime::getCurrentTime(Time_t* time)
+void SysTime::getCurrentTime(RealTime* time)
 {
     if (!time) return;
 

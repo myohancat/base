@@ -8,16 +8,16 @@
 
 #include <stdint.h>
 
-typedef struct Time_s
+struct RealTime
 {
-    uint16_t mYear;
-    uint8_t  mMonth;
-    uint8_t  mDay;
-    uint8_t  mHour;
-    uint8_t  mMin;
-    uint8_t  mSec;
-    uint8_t  mMsec;
-} Time_t;
+    uint16_t  mYear;
+    uint8_t   mMonth;
+    uint8_t   mDay;
+    uint8_t   mHour;
+    uint8_t   mMin;
+    uint8_t   mSec;
+    uint16_t  mMsec;
+};
 
 class SysTime
 {
@@ -37,5 +37,5 @@ public:
      */
     static uint64_t getCurrentTime();
 
-    static void getCurrentTime(Time_t* time);
+    static void getCurrentTime(RealTime* time);
 };
