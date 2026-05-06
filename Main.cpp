@@ -1,7 +1,6 @@
-#include "Log.h"
-
 #include <signal.h>
 
+#include "Log.h"
 #include "MainLoop.h"
 
 static void _sig_handler(int signum)

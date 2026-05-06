@@ -73,14 +73,18 @@ bool TimerTask::getRepeat() const
 
 void TimerTask::run()
 {
-    while (!mExitTask)
+    while (shouldRun())
     {
-        uint64_t expireTime = mStartTime + mIntervalMs;
-        uint64_t timeoutMs  = expireTime - SysTime::getTickCountMs();
+        int64_t currentTime = SysTime::getTickCountMs();
+        int64_t expireTime  = mStartTime + mIntervalMs;
+        int timeoutMs = (int)(expireTime - currentTime);
+
+        if (timeoutMs < 0)
+            timeoutMs = 1; // Escape busy waiting
 
         msleep(timeoutMs);
 
-        if (!mExitTask)
+        if (!shouldRun())  // Cancel
             break;
 
         if (mHandler)
@@ -89,6 +93,6 @@ void TimerTask::run()
         if (mRepeat == false)
             break;
 
-        mStartTime = expireTime;
+        mStartTime += mIntervalMs;
     }
 }
