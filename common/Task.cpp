@@ -55,7 +55,9 @@ Task::~Task()
 {
     std::lock_guard<std::mutex> lock(mLock);
 
-    if (mState == TaskState::Exited)
+    TaskState state = mState.load();
+
+    if (state == TaskState::Exited)
     {
         pthread_join(mId, nullptr);
         return;
@@ -66,7 +68,7 @@ Task::~Task()
      * before their members are destroyed.
      * This stop() is only a last-resort cleanup.
      */
-    if (mState != TaskState::Idle)
+    if (state != TaskState::Idle)
     {
         LOGE("Derived class must stop() before destoryed.");
         abort();
@@ -79,7 +81,7 @@ void Task::setCpuAffinity(int cpuid)
 
     if (cpuid != -1)
     {
-        if (mState != TaskState::Idle)
+        if (mState.load() != TaskState::Idle)
         {
             cpu_set_t cpuset;
             CPU_ZERO(&cpuset);
@@ -95,16 +97,17 @@ bool Task::start()
 {
     std::unique_lock<std::mutex> lock(mLock);
 
-    if (mState != TaskState::Idle && mState != TaskState::Exited)
+    TaskState state = mState.load();
+    if (state != TaskState::Idle && state != TaskState::Exited)
     {
         LOGW("task %s is already running", mName.c_str());
         return false;
     }
 
-    if (mState == TaskState::Exited)
+    if (state == TaskState::Exited)
     {
         pthread_join(mId, NULL);
-        mState = TaskState::Idle;
+        mState.store(TaskState::Idle);
     }
 
     pthread_attr_t attr;
@@ -131,14 +134,14 @@ bool Task::start()
         return false;
     }
 
-    mState = TaskState::Running;
+    mState.store(TaskState::Running);
 
     mWakeupRequested = false;
     if (pthread_create(&mId, &attr, _task_proc_priv, this) != 0)
     {
         LOGE("pthread create failed !");
         pthread_attr_destroy(&attr);
-        mState = TaskState::Idle;
+        mState.store(TaskState::Idle);
         return false;
     }
     pthread_attr_destroy(&attr);
@@ -168,7 +171,8 @@ void Task::stop()
 {
     std::unique_lock<std::mutex> lock(mLock);
 
-    if (mState == TaskState::Idle || mState == TaskState::Stopping)
+    TaskState state = mState.load();
+    if (state == TaskState::Idle || state == TaskState::Stopping)
         return;
 
     if (pthread_equal(pthread_self(), mId))
@@ -177,8 +181,8 @@ void Task::stop()
         return;
     }
 
-    if (mState != TaskState::Exited)
-        mState = TaskState::Stopping;
+    if (state != TaskState::Exited)
+        mState.store(TaskState::Stopping);
 
     onPreStop();
 
@@ -189,7 +193,7 @@ void Task::stop()
     pthread_join(mId, NULL);
     mLock.lock();
 
-    mState = TaskState::Idle;
+    mState.store(TaskState::Idle);
     onPostStop();
 }
 
@@ -203,11 +207,11 @@ void Task::msleep(int msec)
 
         if (pthread_equal(pthread_self(), mId))
         {
-            if (mState == TaskState::Stopping)
+            if (mState.load() == TaskState::Stopping)
                 return;
 
             mCvSleep.wait_for(lock, std::chrono::milliseconds(msec), [this]() {
-                return mState == TaskState::Stopping || mWakeupRequested;
+                return mState.load() == TaskState::Stopping || mWakeupRequested;
             });
             mWakeupRequested = false;
             return;
@@ -233,8 +237,9 @@ void* Task::_task_proc_priv(void* param)
 
     {
         std::lock_guard<std::mutex> lock(pThis->mLock);
-        if (pThis->mState == TaskState::Running || pThis->mState == TaskState::Stopping)
-            pThis->mState = TaskState::Exited;
+        TaskState state = pThis->mState.load();
+        if (state == TaskState::Running || state == TaskState::Stopping)
+            pThis->mState.store(TaskState::Exited);
     }
     return NULL;
 }

@@ -83,7 +83,7 @@ private:
 
     std::mutex              mLock;
     std::condition_variable mCvSleep;
-    TaskState               mState;
+    std::atomic<TaskState>  mState;
     bool                    mWakeupRequested;
 
 private:
@@ -102,7 +102,5 @@ inline void Task::sleep(int sec)
 
 inline bool Task::shouldRun()
 {
-    std::lock_guard<std::mutex> lock(mLock);
-
-    return mState == TaskState::Running;
+    return mState.load() == TaskState::Running;
 }

@@ -51,28 +51,15 @@ private:
 class TaskTest : public Task
 {
 protected:
-    bool onPreStart() override
-    {
-        mExitTask.store(false, std::memory_order_relaxed);
-        return true;
-    }
-
-    void onPreStop() override
-    {
-        mExitTask.store(true, std::memory_order_relaxed);
-    }
-
     void run() override
     {
         int count = 0;
-        while (!mExitTask.load(std::memory_order_relaxed))
+        while (shouldRun())
         {
             LOGD("count : %d", ++count);
             msleep(1000);
         }
     }
-private:
-    std::atomic<bool> mExitTask{false};
 };
 
 int main(void)
