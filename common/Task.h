@@ -9,8 +9,10 @@
 #include <mutex>
 #include <condition_variable>
 #include <atomic>
-#include <pthread.h>
 #include <string>
+#include <cstdint>
+
+#include <pthread.h>
 
 /* Usage:
  *
@@ -27,14 +29,6 @@
  *     }
  * };
  */
-typedef enum
-{
-    TASK_STATE_IDLE,
-    TASK_STATE_RUNNING,
-    TASK_STATE_STOPPING,
-    TASK_STATE_EXITED,
-} TaskState;
-
 class Task
 {
 public:
@@ -79,6 +73,14 @@ protected:
     pthread_t   mId;
 
 private:
+    enum class TaskState : std::uint8_t
+    {
+        Idle,
+        Running,
+        Stopping,
+        Exited
+    };
+
     std::mutex              mLock;
     std::condition_variable mCvSleep;
     TaskState               mState;
@@ -102,5 +104,5 @@ inline bool Task::shouldRun()
 {
     std::lock_guard<std::mutex> lock(mLock);
 
-    return mState == TASK_STATE_RUNNING;
+    return mState == TaskState::Running;
 }

@@ -16,7 +16,7 @@ Task::Task()
        mCpuId(-1),
        mName("Task"),
        mId{},
-       mState(TASK_STATE_IDLE),
+       mState(TaskState::Idle),
        mWakeupRequested(false)
 {
 }
@@ -26,7 +26,7 @@ Task::Task(int priority, int cpuid)
        mCpuId(cpuid),
        mName("Task"),
        mId{},
-       mState(TASK_STATE_IDLE),
+       mState(TaskState::Idle),
        mWakeupRequested(false)
 {
 }
@@ -36,7 +36,7 @@ Task::Task(const std::string& name, int cpuid)
        mCpuId(cpuid),
        mName(name),
        mId{},
-       mState(TASK_STATE_IDLE),
+       mState(TaskState::Idle),
        mWakeupRequested(false)
 {
 }
@@ -46,7 +46,7 @@ Task::Task(int priority, const std::string& name, int cpuid)
        mCpuId(cpuid),
        mName(name),
        mId{},
-       mState(TASK_STATE_IDLE),
+       mState(TaskState::Idle),
        mWakeupRequested(false)
 {
 }
@@ -55,7 +55,7 @@ Task::~Task()
 {
     std::lock_guard<std::mutex> lock(mLock);
 
-    if (mState == TASK_STATE_EXITED)
+    if (mState == TaskState::Exited)
     {
         pthread_join(mId, nullptr);
         return;
@@ -66,7 +66,7 @@ Task::~Task()
      * before their members are destroyed.
      * This stop() is only a last-resort cleanup.
      */
-    if (mState != TASK_STATE_IDLE)
+    if (mState != TaskState::Idle)
     {
         LOGE("Derived class must stop() before destoryed.");
         abort();
@@ -79,7 +79,7 @@ void Task::setCpuAffinity(int cpuid)
 
     if (cpuid != -1)
     {
-        if (mState != TASK_STATE_IDLE)
+        if (mState != TaskState::Idle)
         {
             cpu_set_t cpuset;
             CPU_ZERO(&cpuset);
@@ -95,16 +95,16 @@ bool Task::start()
 {
     std::unique_lock<std::mutex> lock(mLock);
 
-    if (mState != TASK_STATE_IDLE && mState != TASK_STATE_EXITED)
+    if (mState != TaskState::Idle && mState != TaskState::Exited)
     {
         LOGW("task %s is already running", mName.c_str());
         return false;
     }
 
-    if (mState == TASK_STATE_EXITED)
+    if (mState == TaskState::Exited)
     {
         pthread_join(mId, NULL);
-        mState = TASK_STATE_IDLE;
+        mState = TaskState::Idle;
     }
 
     pthread_attr_t attr;
@@ -131,14 +131,14 @@ bool Task::start()
         return false;
     }
 
-    mState = TASK_STATE_RUNNING;
+    mState = TaskState::Running;
 
     mWakeupRequested = false;
     if (pthread_create(&mId, &attr, _task_proc_priv, this) != 0)
     {
         LOGE("pthread create failed !");
         pthread_attr_destroy(&attr);
-        mState = TASK_STATE_IDLE;
+        mState = TaskState::Idle;
         return false;
     }
     pthread_attr_destroy(&attr);
@@ -168,7 +168,7 @@ void Task::stop()
 {
     std::unique_lock<std::mutex> lock(mLock);
 
-    if (mState == TASK_STATE_IDLE || mState == TASK_STATE_STOPPING)
+    if (mState == TaskState::Idle || mState == TaskState::Stopping)
         return;
 
     if (pthread_equal(pthread_self(), mId))
@@ -177,8 +177,8 @@ void Task::stop()
         return;
     }
 
-    if (mState != TASK_STATE_EXITED)
-        mState = TASK_STATE_STOPPING;
+    if (mState != TaskState::Exited)
+        mState = TaskState::Stopping;
 
     onPreStop();
 
@@ -189,7 +189,7 @@ void Task::stop()
     pthread_join(mId, NULL);
     mLock.lock();
 
-    mState = TASK_STATE_IDLE;
+    mState = TaskState::Idle;
     onPostStop();
 }
 
@@ -203,11 +203,11 @@ void Task::msleep(int msec)
 
         if (pthread_equal(pthread_self(), mId))
         {
-            if (mState == TASK_STATE_STOPPING)
+            if (mState == TaskState::Stopping)
                 return;
 
             mCvSleep.wait_for(lock, std::chrono::milliseconds(msec), [this]() {
-                return mState == TASK_STATE_STOPPING || mWakeupRequested;
+                return mState == TaskState::Stopping || mWakeupRequested;
             });
             mWakeupRequested = false;
             return;
@@ -233,8 +233,8 @@ void* Task::_task_proc_priv(void* param)
 
     {
         std::lock_guard<std::mutex> lock(pThis->mLock);
-        if (pThis->mState == TASK_STATE_RUNNING || pThis->mState == TASK_STATE_STOPPING)
-            pThis->mState = TASK_STATE_EXITED;
+        if (pThis->mState == TaskState::Running || pThis->mState == TaskState::Stopping)
+            pThis->mState = TaskState::Exited;
     }
     return NULL;
 }
