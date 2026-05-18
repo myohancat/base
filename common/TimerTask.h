@@ -34,5 +34,8 @@ private:
     int      mIntervalMs;
 
 private:
-    void     run();
+    void     run() override;
+
+private:
+    mutable std::recursive_mutex mLock;
 };

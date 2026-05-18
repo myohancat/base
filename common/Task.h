@@ -55,16 +55,16 @@ public:
     bool shouldRun();
 
 protected:
-    virtual void run() noexcept = 0; // MUST IMPLEMENT.
+    virtual void run() = 0; // MUST IMPLEMENT.
 
     /* Important:
      * Don't call Task apis in Callback.
      */
-    virtual bool onPreStart() noexcept { return true; }
-    virtual void onPostStart() noexcept { }
+    virtual bool onPreStart() { return true; }
+    virtual void onPostStart() { }
 
-    virtual void onPreStop() noexcept { }
-    virtual void onPostStop() noexcept { }
+    virtual void onPreStop() { }
+    virtual void onPostStop() { }
 
 protected:
     int         mPriority;

@@ -243,14 +243,14 @@ protected:
      *      }
      *
      *   protected:
-     *       void dispose(GstSample* sample) noexcept override
+     *       void dispose(GstSample* sample) override
      *       {
      *           if (sample)
      *               gst_sample_unref(sample);
      *       }
      *   };
      */
-    virtual void dispose(T) noexcept
+    virtual void dispose(T)
     {
     }
 

@@ -35,11 +35,12 @@ public:
     }
 
 protected:
-    void onTimerExpired(const ITimer* timer) override
+    bool onTimerExpired(const ITimer* timer) override
     {
         (void)timer;
 
         LOGD("timer expired.");
+        return true;
     }
 
 private:

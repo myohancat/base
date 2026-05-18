@@ -15,7 +15,20 @@ class ITimerHandler
 public:
     virtual ~ITimerHandler() { };
 
-    virtual void onTimerExpired(const ITimer* timer) = 0;
+     /*
+     * Called when the timer expires.
+     *
+     * Return value:
+     * - true  : continue the timer if repeat mode is enabled.
+     * - false : stop the timer loop after this callback returns.
+     *
+     * Important:
+     * - This callback is called from the timer task thread.
+     * - Do not call start(), stop(), or destroy the timer from this callback.
+     * - To stop the timer from inside the callback, return false.
+     * - The timer pointer is non-owning and is valid only during this call.
+     */
+    virtual bool onTimerExpired(const ITimer* timer) = 0;
 };
 
 class ITimer
