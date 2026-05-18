@@ -144,29 +144,29 @@ public:
 
     void flush()
     {
-        std::array<T, kCapacity> oldValues;
-        size_t oldSize = 0;
-
+        while (true)
         {
-            std::lock_guard<std::mutex> lock(mLock);
+            T oldValue;
+            bool hasValue = false;
 
-            oldSize = mSize;
-
-            for (size_t ii = 0; ii < mSize; ++ii)
             {
-                const size_t index = (mFront + ii) % kCapacity;
-                oldValues[ii] = mBuffer[index];
+                std::lock_guard<std::mutex> lock(mLock);
+
+                if (mSize == 0)
+                {
+                    mFront = 0;
+                    mRear = 0;
+                    break;
+                }
+
+                _get(&oldValue);
+                hasValue = true;
             }
 
-            mSize = 0;
-            mFront = 0;
-            mRear = 0;
+            dispose(oldValue);
         }
 
         mCondVarFull.notify_all();
-
-        for (size_t ii = 0; ii < oldSize; ++ii)
-            dispose(oldValues[ii]);
     }
 
     void setEOS(bool eos)
