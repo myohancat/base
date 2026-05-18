@@ -36,7 +36,6 @@ public:
 
     virtual ~Queue()
     {
-        flush();
     }
 
     bool put(const T t, int timeoutMs = -1)
@@ -219,6 +218,12 @@ protected:
      *
      *   class GstSampleQueue : public Queue<GstSample*, 8>
      *   {
+     *   public:
+     *      ~GstSampleQueue()
+     *      {
+     *          flush();
+     *      }
+     *
      *   protected:
      *       void dispose(GstSample* sample) override
      *       {
