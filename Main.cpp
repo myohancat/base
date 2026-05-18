@@ -10,7 +10,7 @@ static void _sig_handler(int signum)
     MainLoop::getInstance().terminate();
 }
 
-#include "Timer.h"
+#include "TimerTask.h"
 class TimerTest : public ITimerHandler
 {
 public:
@@ -43,7 +43,7 @@ protected:
     }
 
 private:
-    Timer mTimer;
+    TimerTask mTimer;
 };
 
 #include "Task.h"
