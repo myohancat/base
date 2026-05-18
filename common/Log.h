@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #define CRLF                "\n"
 
@@ -57,42 +58,57 @@ LOG_LEVEL_e  LOG_GetLevel();
 void LOG_Print(int priority, const char* color, const char* fmt, ...);
 void LOG_Dump(int priority, const void* ptr, int size);
 
-#define MAX_FUNCION_SIZE    (1024)
+#define MAX_FUNCTION_SIZE    (1024)
 const char* simplify_function(char* buf, const char* func);
-
-#define CHECK(fmt, args...)      do { \
-                                         LOG_Print(LOG_LEVEL_NONE, ANSI_COLOR_BOLD ANSI_COLOR_BIRHGT_CYAN, fmt CRLF, ##args); \
-                                     } while(0)
 
 #define PRINT(fmt, args...)      do { \
                                          LOG_Print(LOG_LEVEL_NONE, ANSI_COLOR_NONE, fmt CRLF, ##args); \
-                                     } while(0)
+                                 } while(0)
 
-#define LOGT(fmt, args...)      do { \
+#define LOGT(fmt, args...)       do { \
                                          LOG_Print(LOG_LEVEL_TRACE, ANSI_COLOR_GRAY, fmt CRLF, ##args); \
-                                     } while(0)
+                                 } while(0)
 
-#define LOGD(fmt, args...)      do { \
+#define LOGD(fmt, args...)       do { \
                                          LOG_Print(LOG_LEVEL_DEBUG, ANSI_COLOR_NONE, fmt CRLF, ##args); \
-                                     } while(0)
+                                 } while(0)
 
 #define LOGI(fmt, args...)       do { \
-                                         char tmp[MAX_FUNCION_SIZE]; \
+                                         char tmp[MAX_FUNCTION_SIZE]; \
                                          const char* func = simplify_function(tmp, __PRETTY_FUNCTION__); \
                                          LOG_Print(LOG_LEVEL_INFO, ANSI_COLOR_YELLOW, "[%s:%d] %s() " fmt CRLF, __BASE_FILE_NAME__, __LINE__, func, ##args); \
-                                     } while(0)
+                                 } while(0)
 
-#define LOGW(fmt, args...)      do { \
-                                         char tmp[MAX_FUNCION_SIZE]; \
+#define LOGW(fmt, args...)       do { \
+                                         char tmp[MAX_FUNCTION_SIZE]; \
                                          const char* func = simplify_function(tmp, __PRETTY_FUNCTION__); \
                                          LOG_Print(LOG_LEVEL_WARN, ANSI_COLOR_BOLD, "[%s:%d] %s() " fmt CRLF, __BASE_FILE_NAME__, __LINE__, func, ##args); \
-                                     } while(0)
+                                 } while(0)
 
-#define LOGE(fmt, args...)      do { \
-                                         char tmp[MAX_FUNCION_SIZE]; \
+#define LOGE(fmt, args...)       do { \
+                                         char tmp[MAX_FUNCTION_SIZE]; \
                                          const char* func = simplify_function(tmp, __PRETTY_FUNCTION__); \
                                          LOG_Print(LOG_LEVEL_ERROR, ANSI_COLOR_BOLD ANSI_COLOR_RED, "[%s:%d] %s() " fmt CRLF, __BASE_FILE_NAME__, __LINE__, func, ##args); \
-                                     } while(0)
+                                 } while(0)
+
+
+#define CHECK(expr)              do { \
+                                        if (!(expr)) { \
+                                            LOGE("CHECK FAILED: %s", #expr); \
+                                            abort(); \
+                                        } \
+                                 } while(0)
+
+#define ABORT_IF(expr)          do { \
+                                    if ((expr)) { \
+                                        LOGE("CHECK FAILED: %s - " #expr); \
+                                        abort(); \
+                                    } \
+                                } while(0)
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #ifdef __cplusplus
 class AutoFunctionTrace
@@ -100,9 +116,10 @@ class AutoFunctionTrace
 public:
     AutoFunctionTrace(const char* filename, int line, const char* func)
     {
-        char tmp[MAX_FUNCION_SIZE];
+        char tmp[MAX_FUNCTION_SIZE];
 
-        snprintf(mStackTrace, MAX_FUNCION_SIZE-1, "[%s:%d] %s", filename, line, simplify_function(tmp, func));
+        snprintf(mStackTrace, MAX_FUNCTION_SIZE-1, "[%s:%d] %s", filename, line, simplify_function(tmp, func));
+        mStackTrace[MAX_FUNCTION_SIZE - 1] = '\0';
 
         LOGT("------ %s() Enter ------", mStackTrace);
     }
@@ -113,14 +130,10 @@ public:
     }
 
 private:
-    char mStackTrace[MAX_FUNCION_SIZE];
+    char mStackTrace[MAX_FUNCTION_SIZE];
 };
 
 #define __TRACE__   AutoFunctionTrace __function_trace__(__BASE_FILE_NAME__, __LINE__, __PRETTY_FUNCTION__);
 #else
-#define __TRACE__   LOGT("----- [%s:%d] %s() -----", __BASE_FILE_NAME__, __LINE__, __PRETTY_FUNCTION__);
-#endif
-
-#ifdef __cplusplus
-}
+#define __TRACE__   LOGT("----- [%s:%d] %s() -----", __BASE_FILE_NAME__, __LINE__, __FUNCTION__);
 #endif

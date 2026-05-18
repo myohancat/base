@@ -28,8 +28,8 @@ const char* simplify_function(char* buf, const char* func)
 {
     char* begin, *end, *p;
 
-    strncpy(buf, func, MAX_FUNCION_SIZE-1);
-    buf[MAX_FUNCION_SIZE-1] = 0;
+    strncpy(buf, func, MAX_FUNCTION_SIZE-1);
+    buf[MAX_FUNCTION_SIZE-1] = 0;
 
     end = strrchr(buf, '(');
     if (end) *end = 0;
