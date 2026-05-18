@@ -171,33 +171,34 @@ public:
 
     void setEOS(bool eos)
     {
-        std::lock_guard<std::mutex> lock(mLock);
-
-        mEOS = eos;
+        {
+            std::lock_guard<std::mutex> lock(mLock);
+            mEOS = eos;
+        }
 
         mCondVarFull.notify_all();
         mCondVarEmpty.notify_all();
     }
 
-    size_t size()
+    size_t size() const
     {
         std::lock_guard<std::mutex> lock(mLock);
         return mSize;
     }
 
-    bool isEOS()
+    bool isEOS() const
     {
         std::lock_guard<std::mutex> lock(mLock);
         return mEOS;
     }
 
-    bool isEmpty()
+    bool isEmpty() const
     {
         std::lock_guard<std::mutex> lock(mLock);
         return mSize == 0;
     }
 
-    bool isFull()
+    bool isFull() const
     {
         std::lock_guard<std::mutex> lock(mLock);
         return mSize == kCapacity;
@@ -242,14 +243,14 @@ protected:
      *      }
      *
      *   protected:
-     *       void dispose(GstSample* sample) override
+     *       void dispose(GstSample* sample) noexcept override
      *       {
      *           if (sample)
      *               gst_sample_unref(sample);
      *       }
      *   };
      */
-    virtual void dispose(T)
+    virtual void dispose(T) noexcept
     {
     }
 
@@ -262,7 +263,7 @@ protected:
 
     bool mEOS;
 
-    std::mutex mLock;
+    mutable std::mutex mLock;
     std::condition_variable mCondVarFull;
     std::condition_variable mCondVarEmpty;
 };

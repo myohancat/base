@@ -70,7 +70,7 @@ Task::~Task()
      */
     if (state != TaskState::Idle)
     {
-        LOGE("Derived class must stop() before destoryed.");
+        LOGE("Derived class must stop() before destroyed.");
         abort();
     }
 }
