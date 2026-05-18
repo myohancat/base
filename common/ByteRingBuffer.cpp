@@ -6,12 +6,16 @@
  */
 #include "ByteRingBuffer.h"
 
+#include "Log.h"
+
 #include <cstring>
 #include <algorithm>
 
 ByteRingBuffer::ByteRingBuffer(size_t capacity)
               : mCapacity(capacity), mSize(0), mFront(0), mRear(0)
 {
+    ABORT_IF(capacity == 0);
+
     mData = new uint8_t[mCapacity];
 }
 
