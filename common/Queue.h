@@ -77,20 +77,27 @@ public:
 
     bool putForce(T t)
     {
-        std::unique_lock<std::mutex> lock(mLock);
+        bool hasOldValue = false;
+        T oldValue{};
 
-        if (mEOS)
-            return false;
-
-        if (mSize == kCapacity)
         {
-            T oldValue;
-            _get(&oldValue);
-            dispose(oldValue);
+            std::unique_lock<std::mutex> lock(mLock);
+
+            if (mEOS)
+                return false;
+
+            if (mSize == kCapacity)
+            {
+                _get(&oldValue);
+                hasOldValue = true;
+            }
+            _put(t);
         }
 
-        _put(t);
         mCondVarEmpty.notify_one();
+
+        if (hasOldValue)
+            dispose(oldValue);
 
         return true;
     }
@@ -137,19 +144,29 @@ public:
 
     void flush()
     {
-        std::lock_guard<std::mutex> lock(mLock);
+        std::array<T, kCapacity> oldValues;
+        size_t oldSize = 0;
 
-        for (size_t ii = 0; ii < mSize; ++ii)
         {
-            const size_t index = (mFront + ii) % kCapacity;
-            dispose(mBuffer[index]);
+            std::lock_guard<std::mutex> lock(mLock);
+
+            oldSize = mSize;
+
+            for (size_t ii = 0; ii < mSize; ++ii)
+            {
+                const size_t index = (mFront + ii) % kCapacity;
+                oldValues[ii] = mBuffer[index];
+            }
+
+            mSize = 0;
+            mFront = 0;
+            mRear = 0;
         }
 
-        mSize = 0;
-        mFront = 0;
-        mRear = 0;
-
         mCondVarFull.notify_all();
+
+        for (size_t ii = 0; ii < oldSize; ++ii)
+            dispose(oldValues[ii]);
     }
 
     void setEOS(bool eos)
