@@ -78,7 +78,7 @@ public:
     bool putForce(T t)
     {
         bool hasOldValue = false;
-        T oldValue{};
+        T oldValue;
 
         {
             std::unique_lock<std::mutex> lock(mLock);
@@ -147,7 +147,6 @@ public:
         while (true)
         {
             T oldValue;
-            bool hasValue = false;
 
             {
                 std::lock_guard<std::mutex> lock(mLock);
@@ -160,7 +159,6 @@ public:
                 }
 
                 _get(&oldValue);
-                hasValue = true;
             }
 
             dispose(oldValue);

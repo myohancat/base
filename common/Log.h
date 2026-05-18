@@ -10,7 +10,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define CRLF                "\n"
+#define LOG_EOL                 "\n"
 
 #define BASENAME(str)       (strrchr(str, '/') ? strrchr(str, '/') + 1 : str)
 #define __BASE_FILE_NAME__   BASENAME(__FILE__)
@@ -31,9 +31,9 @@
 #define ANSI_COLOR_DARKGRAY  "\x1b[30;1m"
 #define ANSI_COLOR_RESET     "\x1b[0m"
 
-#define ANSI_COLOR_BIRHGT_YELLOW   "\x1b[93m"
-#define ANSI_COLOR_BIRHGT_MAGENTA  "\x1b[95m"
-#define ANSI_COLOR_BIRHGT_CYAN     "\x1b[96m"
+#define ANSI_COLOR_BRIGHT_YELLOW   "\x1b[93m"
+#define ANSI_COLOR_BRIGHT_MAGENTA  "\x1b[95m"
+#define ANSI_COLOR_BRIGHT_CYAN     "\x1b[96m"
 
 typedef enum
 {
@@ -53,7 +53,7 @@ extern "C"
 #endif
 
 void         LOG_SetLevel(LOG_LEVEL_e eLevel);
-LOG_LEVEL_e  LOG_GetLevel();
+LOG_LEVEL_e  LOG_GetLevel(void);
 
 void LOG_Print(int priority, const char* color, const char* fmt, ...);
 void LOG_Dump(int priority, const void* ptr, int size);
@@ -62,46 +62,46 @@ void LOG_Dump(int priority, const void* ptr, int size);
 const char* simplify_function(char* buf, const char* func);
 
 #define PRINT(fmt, args...)      do { \
-                                         LOG_Print(LOG_LEVEL_NONE, ANSI_COLOR_NONE, fmt CRLF, ##args); \
+                                         LOG_Print(LOG_LEVEL_NONE, ANSI_COLOR_NONE, fmt LOG_EOL, ##args); \
                                  } while(0)
 
 #define LOGT(fmt, args...)       do { \
-                                         LOG_Print(LOG_LEVEL_TRACE, ANSI_COLOR_GRAY, fmt CRLF, ##args); \
+                                         LOG_Print(LOG_LEVEL_TRACE, ANSI_COLOR_GRAY, fmt LOG_EOL, ##args); \
                                  } while(0)
 
 #define LOGD(fmt, args...)       do { \
-                                         LOG_Print(LOG_LEVEL_DEBUG, ANSI_COLOR_NONE, fmt CRLF, ##args); \
+                                         LOG_Print(LOG_LEVEL_DEBUG, ANSI_COLOR_NONE, fmt LOG_EOL, ##args); \
                                  } while(0)
 
 #define LOGI(fmt, args...)       do { \
                                          char tmp[MAX_FUNCTION_SIZE]; \
                                          const char* func = simplify_function(tmp, __PRETTY_FUNCTION__); \
-                                         LOG_Print(LOG_LEVEL_INFO, ANSI_COLOR_YELLOW, "[%s:%d] %s() " fmt CRLF, __BASE_FILE_NAME__, __LINE__, func, ##args); \
+                                         LOG_Print(LOG_LEVEL_INFO, ANSI_COLOR_YELLOW, "[%s:%d] %s() " fmt LOG_EOL, __BASE_FILE_NAME__, __LINE__, func, ##args); \
                                  } while(0)
 
 #define LOGW(fmt, args...)       do { \
                                          char tmp[MAX_FUNCTION_SIZE]; \
                                          const char* func = simplify_function(tmp, __PRETTY_FUNCTION__); \
-                                         LOG_Print(LOG_LEVEL_WARN, ANSI_COLOR_BOLD, "[%s:%d] %s() " fmt CRLF, __BASE_FILE_NAME__, __LINE__, func, ##args); \
+                                         LOG_Print(LOG_LEVEL_WARN, ANSI_COLOR_BOLD, "[%s:%d] %s() " fmt LOG_EOL, __BASE_FILE_NAME__, __LINE__, func, ##args); \
                                  } while(0)
 
 #define LOGE(fmt, args...)       do { \
                                          char tmp[MAX_FUNCTION_SIZE]; \
                                          const char* func = simplify_function(tmp, __PRETTY_FUNCTION__); \
-                                         LOG_Print(LOG_LEVEL_ERROR, ANSI_COLOR_BOLD ANSI_COLOR_RED, "[%s:%d] %s() " fmt CRLF, __BASE_FILE_NAME__, __LINE__, func, ##args); \
+                                         LOG_Print(LOG_LEVEL_ERROR, ANSI_COLOR_BOLD ANSI_COLOR_RED, "[%s:%d] %s() " fmt LOG_EOL, __BASE_FILE_NAME__, __LINE__, func, ##args); \
                                  } while(0)
 
 
 #define CHECK(expr)              do { \
                                         if (!(expr)) { \
-                                            LOGE("CHECK FAILED: %s", #expr); \
+                                            LOGE("CHECK FAILED: " #expr); \
                                             abort(); \
                                         } \
                                  } while(0)
 
 #define ABORT_IF(expr)          do { \
                                     if ((expr)) { \
-                                        LOGE("CHECK FAILED: %s - " #expr); \
+                                        LOGE("ABORT_IF: " #expr); \
                                         abort(); \
                                     } \
                                 } while(0)
