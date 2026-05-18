@@ -53,7 +53,7 @@ private:
     bool     drainWakeupFd();
 
 private:
-    ObserverList<IFdWatcher> mFdWatchers;
+    RawObserverList<IFdWatcher> mFdWatchers;
 
     std::mutex mTimerLock;
     typedef std::list<Timer*> TimerList;

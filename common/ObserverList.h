@@ -6,22 +6,21 @@
  */
 #pragma once
 
+#include "Log.h"
 #include <cstddef>
 #include <vector>
 #include <memory>
 #include <mutex>
 #include <algorithm>
-#include <cassert>
 
 // ============================================================================
 // 1. RawObserverList
 //
 // - raw pointer 기반 non-owning observer list
 // - notify()는 lock을 잡은 상태에서 callback을 호출한다.
-// - 따라서 removeObserver()가 반환되면 진행 중인 notify callback과 겹치지 않는다.
 // - callback 안에서 addObserver/removeObserver/clear 호출은 금지된다.
-// - 같은 스레드에서 callback 중 add/remove/clear가 호출되면 debug에서는 assert,
-//   release에서는 무시하고 return한다.
+// - 같은 스레드에서 callback 중 add/remove/clear가 호출되면
+//   로그를 남기고 abort한다.
 //
 // 용도:
 // - observer가 stack object이거나 shared_ptr로 관리할 수 없는 레거시 객체
@@ -46,12 +45,7 @@ public:
         if (!observer)
             return;
 
-        if (isNotifyingThisThread())
-        {
-            assert(false &&
-                   "RawObserverList::addObserver() must not be called from notify callback on the same thread");
-            return;
-        }
+        ABORT_IF(isNotifyingThisThread());
 
         std::lock_guard<std::mutex> lock(mLock);
 
@@ -64,12 +58,7 @@ public:
         if (!observer)
             return;
 
-        if (isNotifyingThisThread())
-        {
-            assert(false &&
-                   "RawObserverList::removeObserver() must not be called from notify callback on the same thread");
-            return;
-        }
+        ABORT_IF(isNotifyingThisThread());
 
         std::lock_guard<std::mutex> lock(mLock);
 
@@ -80,12 +69,7 @@ public:
 
     void clear()
     {
-        if (isNotifyingThisThread())
-        {
-            assert(false &&
-                   "RawObserverList::clear() must not be called from notify callback on the same thread");
-            return;
-        }
+        ABORT_IF(isNotifyingThisThread());
 
         std::lock_guard<std::mutex> lock(mLock);
         mObservers.clear();
@@ -94,6 +78,8 @@ public:
     template <typename Func>
     void notify(Func&& action)
     {
+        ABORT_IF(isNotifyingThisThread());
+
         std::lock_guard<std::mutex> lock(mLock);
 
         NotifyScope scope(this);
