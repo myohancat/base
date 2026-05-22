@@ -20,7 +20,7 @@
 #define ANSI_COLOR_ITALIC    "\x1b[3m"
 #define ANSI_COLOR_UNDERLINE "\x1b[4m"
 
-#define ANSI_COLOR_NONE      NULL
+#define ANSI_COLOR_NONE      ""
 #define ANSI_COLOR_RED       "\x1b[31m"
 #define ANSI_COLOR_GREEN     "\x1b[32m"
 #define ANSI_COLOR_YELLOW    "\x1b[33m"
@@ -56,55 +56,55 @@ void         LOG_SetLevel(LOG_LEVEL_e eLevel);
 LOG_LEVEL_e  LOG_GetLevel(void);
 
 void LOG_Print(int priority, const char* color, const char* fmt, ...);
-void LOG_Dump(int priority, const void* ptr, int size);
+void LOG_Dump(int priority, const void* ptr, size_t len);
 
-#define MAX_FUNCTION_SIZE    (1024)
+#define MAX_FUNCTION_SIZE    (128)
 const char* simplify_function(char* buf, const char* func);
 
-#define PRINT(fmt, args...)      do { \
-                                         LOG_Print(LOG_LEVEL_NONE, ANSI_COLOR_NONE, fmt LOG_EOL, ##args); \
-                                 } while(0)
+#define PRINT(fmt, ...)    do { \
+                                   LOG_Print(LOG_LEVEL_NONE, ANSI_COLOR_NONE, fmt LOG_EOL, ##__VA_ARGS__); \
+                           } while(0)
 
-#define LOGT(fmt, args...)       do { \
-                                         LOG_Print(LOG_LEVEL_TRACE, ANSI_COLOR_GRAY, fmt LOG_EOL, ##args); \
-                                 } while(0)
+#define LOGT(fmt, ...)     do { \
+                                   LOG_Print(LOG_LEVEL_TRACE, ANSI_COLOR_GRAY, fmt LOG_EOL, ##__VA_ARGS__); \
+                           } while(0)
 
-#define LOGD(fmt, args...)       do { \
-                                         LOG_Print(LOG_LEVEL_DEBUG, ANSI_COLOR_NONE, fmt LOG_EOL, ##args); \
-                                 } while(0)
+#define LOGD(fmt, ...)     do { \
+                                   LOG_Print(LOG_LEVEL_DEBUG, ANSI_COLOR_NONE, fmt LOG_EOL, ##__VA_ARGS__); \
+                           } while(0)
 
-#define LOGI(fmt, args...)       do { \
-                                         char tmp[MAX_FUNCTION_SIZE]; \
-                                         const char* func = simplify_function(tmp, __PRETTY_FUNCTION__); \
-                                         LOG_Print(LOG_LEVEL_INFO, ANSI_COLOR_YELLOW, "[%s:%d] %s() " fmt LOG_EOL, __BASE_FILE_NAME__, __LINE__, func, ##args); \
-                                 } while(0)
+#define LOGI(fmt, ...)     do { \
+                                   char tmp[MAX_FUNCTION_SIZE]; \
+                                   const char* func = simplify_function(tmp, __PRETTY_FUNCTION__); \
+                                   LOG_Print(LOG_LEVEL_INFO, ANSI_COLOR_YELLOW, "[%s:%d] %s() " fmt LOG_EOL, __BASE_FILE_NAME__, __LINE__, func, ##__VA_ARGS__); \
+                           } while(0)
 
-#define LOGW(fmt, args...)       do { \
-                                         char tmp[MAX_FUNCTION_SIZE]; \
-                                         const char* func = simplify_function(tmp, __PRETTY_FUNCTION__); \
-                                         LOG_Print(LOG_LEVEL_WARN, ANSI_COLOR_BOLD, "[%s:%d] %s() " fmt LOG_EOL, __BASE_FILE_NAME__, __LINE__, func, ##args); \
-                                 } while(0)
+#define LOGW(fmt, ...)     do { \
+                                   char tmp[MAX_FUNCTION_SIZE]; \
+                                   const char* func = simplify_function(tmp, __PRETTY_FUNCTION__); \
+                                   LOG_Print(LOG_LEVEL_WARN, ANSI_COLOR_BOLD, "[%s:%d] %s() " fmt LOG_EOL, __BASE_FILE_NAME__, __LINE__, func, ##__VA_ARGS__); \
+                           } while(0)
 
-#define LOGE(fmt, args...)       do { \
-                                         char tmp[MAX_FUNCTION_SIZE]; \
-                                         const char* func = simplify_function(tmp, __PRETTY_FUNCTION__); \
-                                         LOG_Print(LOG_LEVEL_ERROR, ANSI_COLOR_BOLD ANSI_COLOR_RED, "[%s:%d] %s() " fmt LOG_EOL, __BASE_FILE_NAME__, __LINE__, func, ##args); \
-                                 } while(0)
+#define LOGE(fmt, ...)     do { \
+                                   char tmp[MAX_FUNCTION_SIZE]; \
+                                   const char* func = simplify_function(tmp, __PRETTY_FUNCTION__); \
+                                   LOG_Print(LOG_LEVEL_ERROR, ANSI_COLOR_BOLD ANSI_COLOR_RED, "[%s:%d] %s() " fmt LOG_EOL, __BASE_FILE_NAME__, __LINE__, func, ##__VA_ARGS__); \
+                           } while(0)
 
 
-#define CHECK(expr)              do { \
-                                        if (!(expr)) { \
-                                            LOGE("CHECK FAILED: " #expr); \
-                                            abort(); \
-                                        } \
-                                 } while(0)
+#define CHECK(expr)        do { \
+                                  if (!(expr)) { \
+                                      LOGE("CHECK FAILED: " #expr); \
+                                      abort(); \
+                                  } \
+                           } while(0)
 
-#define ABORT_IF(expr)          do { \
-                                    if ((expr)) { \
-                                        LOGE("ABORT_IF: " #expr); \
-                                        abort(); \
-                                    } \
-                                } while(0)
+#define ABORT_IF(expr)     do { \
+                               if ((expr)) { \
+                                   LOGE("ABORT_IF: " #expr); \
+                                   abort(); \
+                               } \
+                           } while(0)
 
 #ifdef __cplusplus
 } // extern "C"

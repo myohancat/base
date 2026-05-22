@@ -34,21 +34,31 @@ extern "C"
 
 const char* simplify_function(char* buf, const char* func)
 {
-    char* begin, *end, *p;
+    if (!func) return "";
 
-    strncpy(buf, func, MAX_FUNCTION_SIZE-1);
-    buf[MAX_FUNCTION_SIZE-1] = 0;
+    const char* end = strrchr(func, '(');
+    if (!end) end = func + strlen(func);
 
-    end = strrchr(buf, '(');
-    if (end) *end = 0;
+    const char* p = func;
+    const char* begin = NULL;
+    while ((p = strchr(p, ' ')) && p < end) { begin = p + 1; }
+    if (!begin) begin = func;
 
-    begin = NULL;
-    p = buf;
-    while((p = strchr(p, ' '))) { begin = p; p++; }
-    if (begin) begin++;
-    else begin = buf;
+    size_t len = end - begin;
 
-    return begin;
+    if (len >= MAX_FUNCTION_SIZE)
+    {
+        size_t copy_len = MAX_FUNCTION_SIZE - 4;
+        strncpy(buf, begin, copy_len);
+        strcpy(buf + copy_len, "...");
+    }
+    else
+    {
+        strncpy(buf, begin, len);
+        buf[len] = '\0';
+    }
+
+    return buf;
 }
 
 static FILE* output_device(void)
@@ -92,7 +102,7 @@ void LOG_Print(int priority, const char* color, const char* fmt, ...)
 
     fp = output_device();
 
-    if(color)
+    if(color && color[0] != '\0')
         fputs(color, fp);
 
     if(gLogWithTime)
@@ -105,7 +115,7 @@ void LOG_Print(int priority, const char* color, const char* fmt, ...)
     vfprintf(fp, fmt, ap);
     va_end(ap);
 
-    if(color)
+    if(color && color[0] != '\0')
         fputs(ANSI_COLOR_RESET, fp);
 
     fflush(fp);
@@ -113,64 +123,57 @@ void LOG_Print(int priority, const char* color, const char* fmt, ...)
     UNLOCK_LOG_OUT();
 }
 
-#define ISPRINTABLE(c)  (((c)>=32 && (c)<=126))
+#define IS_PRINTABLE(c)  (((c)>=32 && (c)<=126))
 
-void LOG_Dump(int priority, const void* ptr, int size)
+void LOG_Dump(int priority, const void* ptr, size_t len)
 {
     FILE* fp;
-    char buffer[128];
-    int ii, n;
-    int offset = 0;
+    size_t offset = 0;
     const unsigned char* data = (const unsigned char*)ptr;
 
     if(priority > gLogLevel)
         return;
 
-    if (!ptr || size == 0)
+    if (!ptr || len == 0)
         return;
-
-    fp = output_device();
 
     LOCK_LOG_OUT();
 
-    while (offset < size)
+    fp = output_device();
+
+    while (offset < len)
     {
-        char* p = buffer;
-        int remain = size - offset;
+        char buffer[128];
+        int pos = 0;
+        int remain = len - offset;
+        if (remain > 16) remain = 16;
 
-        n = sprintf(p, "0x%04x  ", offset);
-        p += n;
+        pos += snprintf(buffer + pos, sizeof(buffer) - pos, "0x%04zx  ", offset);
 
-        if (remain > 16)
-            remain = 16;
-
-        for (ii = 0; ii < 16; ii++)
+        for (int i = 0; i < 16; i++)
         {
-            if (ii == 8)
-                *p++ = ' ';
+            if (i == 8)
+                buffer[pos++] = ' ';
 
-            if (offset + ii < size)
-                n = snprintf(p, "%02x ", data[offset + ii]);
+            if (i < remain)
+                pos += snprintf(buffer + pos, sizeof(buffer) - pos, "%02x ", data[offset + i]);
             else
-                n = sprintf(p, "   ");
-
-            p += n;
+                pos += snprintf(buffer + pos, sizeof(buffer) - pos, "   ");
         }
 
-        *p++ = ' ';
+        buffer[pos++] = ' ';
 
-        for (ii = 0; ii < remain; ii++)
+        for (int i = 0; i < remain; i++)
         {
-            if (ISPRINTABLE(data[offset + ii]))
-                *p++ = (char)data[offset + ii];
-            else
-                *p++ = '.';
+            char c = (char)data[offset + i];
+            buffer[pos++] = IS_PRINTABLE(c) ? c : '.';
         }
-        *p++ = '\n';
-        *p = '\0';
 
-        offset += 16;
+        buffer[pos++] = '\n';
+        buffer[pos] = '\0';
+
         fputs(buffer, fp);
+        offset += 16;
     }
 
     fflush(fp);
