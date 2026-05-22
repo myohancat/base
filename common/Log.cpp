@@ -41,8 +41,9 @@ const char* simplify_function(char* buf, const char* func)
 
     const char* p = func;
     const char* begin = NULL;
-    while ((p = strchr(p, ' ')) && p < end) { begin = p + 1; }
-    if (!begin) begin = func;
+    while ((p = strchr(p, ' ')) && p < end) { begin = p; p++; }
+    if (begin) begin++;
+    else begin = buf;
 
     size_t len = end - begin;
 
