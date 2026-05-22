@@ -10,33 +10,58 @@
 #include "Log.h"
 
 #include <algorithm>
-#include <chrono>
-
 #include <errno.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <string.h>
+#include <fcntl.h>
 #include <inttypes.h>
+#include <string.h>
+#include <unistd.h>
 
 #include <sys/epoll.h>
-#include <sys/eventfd.h>
 
-static bool timer_sort(const Timer* first, const Timer* second)
+#ifndef SAFE_CLOSE
+#define SAFE_CLOSE(fd)      \
+    do                      \
+    {                       \
+        if ((fd) >= 0)      \
+        {                   \
+            close(fd);      \
+            (fd) = -1;      \
+        }                   \
+    } while (0)
+#endif
+
+namespace
 {
-    return first->getExpiry() < second->getExpiry();
+bool setNonBlockAndCloseOnExec(int fd)
+{
+    int flags = fcntl(fd, F_GETFL, 0);
+    if (flags < 0)
+        return false;
+
+    if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0)
+        return false;
+
+    flags = fcntl(fd, F_GETFD, 0);
+    if (flags < 0)
+        return false;
+
+    if (fcntl(fd, F_SETFD, flags | FD_CLOEXEC) < 0)
+        return false;
+
+    return true;
+}
 }
 
 MainLoop& MainLoop::getInstance()
 {
     static MainLoop instance;
-
     return instance;
 }
 
 MainLoop::MainLoop()
-        : mEpollFd(-1)
-        , mWakeupFd(-1)
-        , mTerminated(false)
+    : mEpollFd(-1)
+    , mPipe { -1, -1 }
+    , mTerminated(false)
 {
     mEpollFd = epoll_create1(EPOLL_CLOEXEC);
     if (mEpollFd < 0)
@@ -45,38 +70,48 @@ MainLoop::MainLoop()
         return;
     }
 
-    mWakeupFd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
-    if (mWakeupFd < 0)
+#if defined(__linux__)
+    if (pipe2(mPipe, O_NONBLOCK | O_CLOEXEC) < 0)
+#else
+    if (pipe(mPipe) < 0)
+#endif
     {
-        LOGE("cannot create eventfd! errno=%d", errno);
+        LOGE("cannot create command pipe! errno=%d", errno);
         return;
     }
+
+#if !defined(__linux__)
+    if (!setNonBlockAndCloseOnExec(mPipe[0]) ||
+        !setNonBlockAndCloseOnExec(mPipe[1]))
+    {
+        LOGE("cannot configure command pipe! errno=%d", errno);
+        return;
+    }
+#else
+    /*
+     * pipe2() already configured both ends.
+     * Keep this helper referenced for non-Linux builds only.
+     */
+    (void)setNonBlockAndCloseOnExec;
+#endif
 
     struct epoll_event event;
     memset(&event, 0, sizeof(event));
 
     event.events = EPOLLIN;
-    event.data.ptr = NULL; // NULL means wakeup fd.
+    event.data.ptr = nullptr; // nullptr means command pipe.
 
-    if (epoll_ctl(mEpollFd, EPOLL_CTL_ADD, mWakeupFd, &event) < 0)
+    if (epoll_ctl(mEpollFd, EPOLL_CTL_ADD, mPipe[0], &event) < 0)
     {
-        LOGE("epoll_ctl add wakeup fd failed! errno=%d", errno);
+        LOGE("epoll_ctl add command pipe failed! errno=%d", errno);
     }
 }
 
 MainLoop::~MainLoop()
 {
-    if (mWakeupFd >= 0)
-    {
-        close(mWakeupFd);
-        mWakeupFd = -1;
-    }
-
-    if (mEpollFd >= 0)
-    {
-        close(mEpollFd);
-        mEpollFd = -1;
-    }
+    SAFE_CLOSE(mPipe[0]);
+    SAFE_CLOSE(mPipe[1]);
+    SAFE_CLOSE(mEpollFd);
 }
 
 void MainLoop::addFdWatcher(IFdWatcher* watcher)
@@ -113,7 +148,7 @@ void MainLoop::addFdWatcher(IFdWatcher* watcher)
         return;
     }
 
-    mFdWatchers.addObserver(watcher);
+    mFdWatchers.add(watcher);
 }
 
 void MainLoop::removeFdWatcher(IFdWatcher* watcher)
@@ -125,7 +160,7 @@ void MainLoop::removeFdWatcher(IFdWatcher* watcher)
 
     if (mEpollFd >= 0 && fd >= 0)
     {
-        if (epoll_ctl(mEpollFd, EPOLL_CTL_DEL, fd, NULL) < 0)
+        if (epoll_ctl(mEpollFd, EPOLL_CTL_DEL, fd, nullptr) < 0)
         {
             if (errno != ENOENT && errno != EBADF)
             {
@@ -134,7 +169,33 @@ void MainLoop::removeFdWatcher(IFdWatcher* watcher)
         }
     }
 
-    mFdWatchers.removeObserver(watcher);
+    mFdWatchers.remove(watcher);
+}
+
+void MainLoop::insertTimerLocked(Timer* timer)
+{
+    if (!timer)
+        return;
+
+    TimerList::iterator exists =
+        std::find(mTimers.begin(), mTimers.end(), timer);
+
+    if (exists != mTimers.end())
+    {
+        LOGE("timer already exists in MainLoop");
+        return;
+    }
+
+    TimerList::iterator pos =
+        std::find_if(
+            mTimers.begin(),
+            mTimers.end(),
+            [timer](const Timer* other) {
+                return timer->getExpiryFromLoop() < other->getExpiryFromLoop();
+            }
+        );
+
+    mTimers.insert(pos, timer);
 }
 
 void MainLoop::addTimer(Timer* timer)
@@ -144,16 +205,7 @@ void MainLoop::addTimer(Timer* timer)
 
     {
         std::lock_guard<std::mutex> lock(mTimerLock);
-
-        TimerList::iterator it = std::find(mTimers.begin(), mTimers.end(), timer);
-        if (it != mTimers.end())
-        {
-            LOGE("timer is alreay exsit !!");
-            return;
-        }
-
-        mTimers.push_back(timer);
-        mTimers.sort(timer_sort);
+        insertTimerLocked(timer);
     }
 
     wakeup();
@@ -180,131 +232,145 @@ void MainLoop::removeTimer(Timer* timer)
     wakeup();
 }
 
-#define WAIT_TIME (10 * 1000)
+Timer* MainLoop::takeExpiredTimerLocked(uint64_t now)
+{
+    if (mTimers.empty())
+        return nullptr;
+
+    Timer* timer = mTimers.front();
+
+    if (!timer)
+    {
+        mTimers.pop_front();
+        return nullptr;
+    }
+
+    const uint64_t expiry = timer->getExpiryFromLoop();
+
+    if (expiry > now)
+        return nullptr;
+
+    /*
+     * Transition Queued -> Executing while the timer is still in the list.
+     *
+     * This prevents Timer::~Timer()/stopAndWait() from believing MainLoop
+     * no longer holds the execution path.
+     */
+    const bool canExecute = timer->tryBeginExecuteFromLoop();
+
+    /*
+     * Remove before callback.
+     * MainLoop must not hold mTimerLock while executing user code.
+     */
+    mTimers.pop_front();
+
+    if (!canExecute)
+        return nullptr;
+
+    return timer;
+}
+
+uint32_t MainLoop::getNextTimerTimeoutLocked(uint64_t now) const
+{
+    if (mTimers.empty())
+        return WaitTimeMs;
+
+    Timer* timer = mTimers.front();
+
+    if (!timer)
+        return 0;
+
+    const uint64_t expiry = timer->getExpiryFromLoop();
+
+    if (expiry <= now)
+        return 0;
+
+    const uint64_t diff = expiry - now;
+
+    if (diff > static_cast<uint64_t>(WaitTimeMs))
+        return WaitTimeMs;
+
+    return static_cast<uint32_t>(diff);
+}
+
+uint32_t MainLoop::getNextTimerTimeout()
+{
+    std::lock_guard<std::mutex> lock(mTimerLock);
+    return getNextTimerTimeoutLocked(SysTime::getTickCountMs());
+}
 
 uint32_t MainLoop::runTimers()
 {
-    Timer* expiredTimer = NULL;
-    int32_t timeout = WAIT_TIME;
+    Timer* expiredTimer = nullptr;
 
     {
         std::lock_guard<std::mutex> lock(mTimerLock);
-
-        if (!mTimers.empty())
-        {
-            const uint64_t now = SysTime::getTickCountMs();
-            const uint64_t expiry = mTimers.front()->getExpiry();
-
-            if (expiry <= now)
-            {
-                expiredTimer = mTimers.front();
-                timeout = 0;
-            }
-            else
-            {
-                const uint64_t diff = expiry - now;
-                timeout = diff > static_cast<uint64_t>(WAIT_TIME)
-                    ? WAIT_TIME
-                    : static_cast<int32_t>(diff);
-            }
-        }
+        expiredTimer = takeExpiredTimerLocked(SysTime::getTickCountMs());
     }
 
-    if (expiredTimer)
+    if (!expiredTimer)
     {
-        const bool keepTimer = expiredTimer->execute();
-
-        {
-            std::lock_guard<std::mutex> lock(mTimerLock);
-
-            if (!keepTimer)
-            {
-                if (!mTimers.empty() && expiredTimer == mTimers.front())
-                {
-                    mTimers.pop_front();
-                }
-                else
-                {
-                    mTimers.remove(expiredTimer);
-                }
-            }
-
-            mTimers.sort(timer_sort);
-
-            if (!mTimers.empty())
-            {
-                const uint64_t now = SysTime::getTickCountMs();
-                const uint64_t expiry = mTimers.front()->getExpiry();
-
-                if (expiry <= now)
-                {
-                    timeout = 0;
-                }
-                else
-                {
-                    const uint64_t diff = expiry - now;
-                    timeout = diff > static_cast<uint64_t>(WAIT_TIME)
-                        ? WAIT_TIME
-                        : static_cast<int32_t>(diff);
-                }
-            }
-            else
-            {
-                timeout = WAIT_TIME;
-            }
-        }
+        return getNextTimerTimeout();
     }
 
-    if (timeout < 0)
-        timeout = 0;
-    else if (timeout > WAIT_TIME)
-        timeout = WAIT_TIME;
+    const bool keepTimer = expiredTimer->executeFromLoop();
 
-    return static_cast<uint32_t>(timeout);
+    if (keepTimer)
+    {
+        expiredTimer->requeueFromLoop();
+    }
+
+    return getNextTimerTimeout();
 }
 
 bool MainLoop::loop()
 {
-    if (mEpollFd < 0 || mWakeupFd < 0)
+    if (mEpollFd < 0 || mPipe[0] < 0)
         return false;
 
-    while (runFunctions()) { } // Execute posted functions.
+    while (runFunctions())
+    {
+    }
 
     uint32_t timeToWait = 0;
-    while ((timeToWait = runTimers()) == 0) { } // Execute expired timers.
+    while ((timeToWait = runTimers()) == 0)
+    {
+    }
 
-    static const int MAX_EVENTS = 32;
-    struct epoll_event events[MAX_EVENTS];
+    static constexpr int MaxEvents = 32;
+    struct epoll_event events[MaxEvents];
 
-    int eventCount = epoll_wait(
+    const int eventCount = epoll_wait(
         mEpollFd,
         events,
-        MAX_EVENTS,
+        MaxEvents,
         static_cast<int>(timeToWait)
     );
 
-    if (eventCount == 0) // TIMEOUT OCCURED
+    if (eventCount == 0)
         return true;
 
     if (eventCount < 0)
     {
         if (errno == EINTR)
-            return true; // INTERRUPT RECEIVED
+            return true;
 
-        LOGE("epoll_wait error occured!!! errno=%d", errno);
+        LOGE("epoll_wait error occurred! errno=%d", errno);
         return false;
     }
 
     for (int i = 0; i < eventCount; ++i)
     {
-        if (events[i].data.ptr == NULL)
+        if (events[i].data.ptr == nullptr)
         {
-            if (!drainWakeupFd())
+            bool terminated = false;
+
+            if (!drainCommandPipe(terminated))
                 return true;
 
-            if (mTerminated.load())
+            if (terminated || mTerminated.load(std::memory_order_acquire))
             {
-                LOGI(">> terminated recieved.");
+                LOGI(">> terminated received.");
                 return false;
             }
 
@@ -345,71 +411,84 @@ void MainLoop::post(const std::function<void()>& func)
 
 bool MainLoop::runFunctions()
 {
-    std::function<void()> func = NULL;
+    FunctionList pending;
 
     {
         std::lock_guard<std::mutex> lock(mFunctionLock);
-
-        if (!mFunctions.empty())
-        {
-            func = mFunctions.front();
-            mFunctions.pop_front();
-        }
+        pending.swap(mFunctions);
     }
 
-    if (func)
+    for (FunctionList::iterator it = pending.begin(); it != pending.end(); ++it)
     {
-        func();
-        return true;
+        if (*it)
+            (*it)();
     }
 
-    return false;
+    return !pending.empty();
 }
 
-void MainLoop::wakeup()
+void MainLoop::sendCommand(LoopCommand command)
 {
-    if (mWakeupFd < 0)
+    if (mPipe[1] < 0)
         return;
 
-    uint64_t value = 1;
+    const uint8_t value = static_cast<uint8_t>(command);
 
     while (true)
     {
-        ssize_t ret = write(mWakeupFd, &value, sizeof(value));
+        const ssize_t ret = write(mPipe[1], &value, sizeof(value));
+
         if (ret == static_cast<ssize_t>(sizeof(value)))
             return;
 
         if (ret < 0 && errno == EINTR)
             continue;
 
+        /*
+         * Pipe full means MainLoop already has pending commands/wakeup bytes.
+         */
         if (ret < 0 && errno == EAGAIN)
             return;
 
         if (ret < 0)
-            LOGE("eventfd write failed! errno=%d", errno);
+            LOGE("command pipe write failed! errno=%d", errno);
 
         return;
     }
 }
 
-void MainLoop::terminate()
+bool MainLoop::drainCommandPipe(bool& terminated)
 {
-    mTerminated.store(true);
-    wakeup();
-}
+    terminated = false;
 
-bool MainLoop::drainWakeupFd()
-{
-    if (mWakeupFd < 0)
+    if (mPipe[0] < 0)
         return false;
 
     while (true)
     {
-        uint64_t value = 0;
-        ssize_t ret = read(mWakeupFd, &value, sizeof(value));
+        uint8_t value = 0;
+        const ssize_t ret = read(mPipe[0], &value, sizeof(value));
 
         if (ret == static_cast<ssize_t>(sizeof(value)))
+        {
+            const LoopCommand command = static_cast<LoopCommand>(value);
+
+            switch (command)
+            {
+                case LoopCommand::Wakeup:
+                    break;
+
+                case LoopCommand::Terminate:
+                    terminated = true;
+                    break;
+
+                default:
+                    LOGE("unknown loop command. value=%u", value);
+                    break;
+            }
+
             continue;
+        }
 
         if (ret < 0 && errno == EINTR)
             continue;
@@ -417,12 +496,24 @@ bool MainLoop::drainWakeupFd()
         if (ret < 0 && errno == EAGAIN)
             return true;
 
-        if (ret < 0)
-        {
-            LOGE("eventfd read failed! errno=%d", errno);
-            return false;
-        }
+        if (ret == 0)
+            return true;
 
-        return true;
+        LOGE("command pipe read failed! errno=%d", errno);
+        return false;
     }
+}
+
+void MainLoop::wakeup()
+{
+    sendCommand(LoopCommand::Wakeup);
+}
+
+void MainLoop::terminate()
+{
+    /*
+     * Atomic flag protects termination even if command pipe is full.
+     */
+    mTerminated.store(true, std::memory_order_release);
+    sendCommand(LoopCommand::Terminate);
 }

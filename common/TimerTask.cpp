@@ -80,6 +80,14 @@ bool TimerTask::getRepeat() const
     return mRepeat;
 }
 
+void TimerTask::restart()
+{
+    stop();
+
+    mStartTime  = SysTime::getTickCountMs();
+    Task::start();
+}
+
 void TimerTask::run()
 {
     while (shouldRun())
@@ -114,7 +122,7 @@ void TimerTask::run()
             bool keepGoing = mRepeat;
 
             if (mHandler)
-                keepGoing &= mHandler->onTimerExpired(this);
+                keepGoing &= mHandler->onTimerExpired(*this);
 
             if (!keepGoing)
                 break;

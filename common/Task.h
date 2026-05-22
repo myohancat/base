@@ -52,7 +52,7 @@ public:
 
     void wakeup();
 
-    bool shouldRun();
+    bool shouldRun() const;
 
 protected:
     virtual void run() = 0; // MUST IMPLEMENT.
@@ -100,7 +100,7 @@ inline void Task::sleep(int sec)
     msleep(sec * 1000);
 }
 
-inline bool Task::shouldRun()
+inline bool Task::shouldRun() const
 {
     return mState.load() == TaskState::Running;
 }

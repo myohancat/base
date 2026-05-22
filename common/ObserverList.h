@@ -1,332 +1,308 @@
-/**
- * My simple base code
- * for developing embedded system.
- *
- * author: Kyungin.Kim < myohancat@naver.com >
- */
 #pragma once
 
-#include "Log.h"
-#include <cstddef>
-#include <vector>
-#include <memory>
 #include <mutex>
-#include <algorithm>
+#include <condition_variable>
+#include <array>
+#include <cstddef>
+#include <bitset>
+#include <utility>
 
-// ============================================================================
-// 1. RawObserverList
-//
-// - raw pointer 기반 non-owning observer list
-// - notify()는 lock을 잡은 상태에서 callback을 호출한다.
-// - callback 안에서 addObserver/removeObserver/clear 호출은 금지된다.
-// - 같은 스레드에서 callback 중 add/remove/clear가 호출되면
-//   로그를 남기고 abort한다.
-//
-// 용도:
-// - observer가 stack object이거나 shared_ptr로 관리할 수 없는 레거시 객체
-// - B::~B() { removeListener(this); } 패턴을 단순하게 유지하고 싶은 경우
-//
-// 주의:
-// - callback 안에서 이 ObserverList를 수정하지 말 것
-// - callback 안에서 오래 걸리는 작업이나 다른 heavy lock 획득은 피하는 것이 좋음
-// ============================================================================
-template <typename T>
+template <typename T, std::size_t MaxObservers>
 class RawObserverList
 {
 public:
+    enum class RemoveResult
+    {
+        Removed,
+        NotFound,
+        NullObserver
+    };
+
     RawObserverList() = default;
     ~RawObserverList() = default;
 
     RawObserverList(const RawObserverList&) = delete;
     RawObserverList& operator=(const RawObserverList&) = delete;
+    RawObserverList(RawObserverList&&) = delete;
+    RawObserverList& operator=(RawObserverList&&) = delete;
 
-    void addObserver(T* observer)
+    bool add(T* observer)
     {
-        if (!observer)
-            return;
-
-        ABORT_IF(isNotifyingThisThread());
-
-        std::lock_guard<std::mutex> lock(mLock);
-
-        if (std::find(mObservers.begin(), mObservers.end(), observer) == mObservers.end())
-            mObservers.push_back(observer);
-    }
-
-    void removeObserver(T* observer)
-    {
-        if (!observer)
-            return;
-
-        ABORT_IF(isNotifyingThisThread());
-
-        std::lock_guard<std::mutex> lock(mLock);
-
-        mObservers.erase(
-            std::remove(mObservers.begin(), mObservers.end(), observer),
-            mObservers.end());
-    }
-
-    void clear()
-    {
-        ABORT_IF(isNotifyingThisThread());
-
-        std::lock_guard<std::mutex> lock(mLock);
-        mObservers.clear();
-    }
-
-    template <typename Func>
-    void notify(Func&& action)
-    {
-        ABORT_IF(isNotifyingThisThread());
-
-        std::lock_guard<std::mutex> lock(mLock);
-
-        NotifyScope scope(this);
-
-        for (T* observer : mObservers)
-        {
-            if (observer)
-                action(observer);
-        }
-    }
-
-    bool empty() const
-    {
-        std::lock_guard<std::mutex> lock(mLock);
-        return mObservers.empty();
-    }
-
-    std::size_t size() const
-    {
-        std::lock_guard<std::mutex> lock(mLock);
-        return mObservers.size();
-    }
-
-    bool contains(T* observer) const
-    {
-        if (!observer)
+        if (observer == nullptr)
             return false;
 
         std::lock_guard<std::mutex> lock(mLock);
 
-        return std::find(mObservers.begin(), mObservers.end(), observer) != mObservers.end();
-    }
+        std::size_t freeIndex = MaxObservers;
 
-private:
-    bool isNotifyingThisThread() const
-    {
-        return tCurrentNotifyingList == this;
-    }
-
-    struct NotifyScope
-    {
-        explicit NotifyScope(const RawObserverList* list)
-            : mPrev(tCurrentNotifyingList)
+        for (std::size_t i = 0; i < MaxObservers; ++i)
         {
-            tCurrentNotifyingList = list;
-        }
-
-        ~NotifyScope()
-        {
-            tCurrentNotifyingList = mPrev;
-        }
-
-        NotifyScope(const NotifyScope&) = delete;
-        NotifyScope& operator=(const NotifyScope&) = delete;
-
-        const RawObserverList* mPrev;
-    };
-
-private:
-    std::vector<T*>    mObservers;
-    mutable std::mutex mLock;
-
-    static thread_local const RawObserverList* tCurrentNotifyingList;
-};
-
-template <typename T>
-thread_local const RawObserverList<T>* RawObserverList<T>::tCurrentNotifyingList = nullptr;
-
-
-// ============================================================================
-// 2. ObserverList
-//
-// - weak_ptr 기반 non-owning observer list
-// - ObserverList는 observer를 소유하지 않는다.
-// - notify() 시점에 weak_ptr을 shared_ptr로 승격해서 callback 동안 생명주기를 보장한다.
-// - callback 호출 중에는 lock을 잡지 않는다.
-// - callback 안에서 addObserver/removeObserver 호출 가능
-//
-// 정책:
-// - notify 시점에 targets로 복사된 observer는 removeObserver()가 동시에 호출되어도
-//   이번 notify에서는 호출될 수 있다.
-// - 단, shared_ptr로 생명주기를 잡고 있으므로 use-after-free는 발생하지 않는다.
-//
-// 용도:
-// - observer가 shared_ptr로 관리되는 구조
-// - 싱글톤 A가 observer를 소유하지 않아야 하는 구조
-// ============================================================================
-template <typename T>
-class ObserverList
-{
-public:
-    ObserverList() = default;
-    ~ObserverList() = default;
-
-    ObserverList(const ObserverList&) = delete;
-    ObserverList& operator=(const ObserverList&) = delete;
-
-    void addObserver(const std::shared_ptr<T>& observer)
-    {
-        if (!observer)
-            return;
-
-        std::lock_guard<std::mutex> lock(mLock);
-
-        compactExpiredLocked();
-
-        for (const auto& weak : mObservers)
-        {
-            if (auto sp = weak.lock())
+            if (!mOccupiedBits.test(i))
             {
-                if (sp.get() == observer.get())
-                    return;
+                if (freeIndex == MaxObservers)
+                    freeIndex = i;
+
+                continue;
             }
-        }
 
-        mObservers.emplace_back(observer);
-    }
+            const Entry& entry = mEntries[i];
 
-    void removeObserver(const std::shared_ptr<T>& observer)
-    {
-        if (!observer)
-            return;
-
-        removeObserver(observer.get());
-    }
-
-    void removeObserver(T* observer)
-    {
-        if (!observer)
-            return;
-
-        std::lock_guard<std::mutex> lock(mLock);
-
-        mObservers.erase(
-            std::remove_if(
-                mObservers.begin(),
-                mObservers.end(),
-                [observer](const std::weak_ptr<T>& weak) {
-                    auto sp = weak.lock();
-                    return !sp || sp.get() == observer;
-                }),
-            mObservers.end());
-    }
-
-    void clear()
-    {
-        std::lock_guard<std::mutex> lock(mLock);
-        mObservers.clear();
-    }
-
-    template <typename Func>
-    void notify(Func&& action)
-    {
-        std::vector<std::shared_ptr<T>> targets;
-
-        {
-            std::lock_guard<std::mutex> lock(mLock);
-
-            targets.reserve(mObservers.size());
-
-            for (auto it = mObservers.begin(); it != mObservers.end(); )
-            {
-                if (auto sp = it->lock())
-                {
-                    targets.push_back(std::move(sp));
-                    ++it;
-                }
-                else
-                {
-                    it = mObservers.erase(it);
-                }
-            }
-        }
-
-        for (const auto& observer : targets)
-            action(observer.get());
-    }
-
-    bool empty() const
-    {
-        std::lock_guard<std::mutex> lock(mLock);
-
-        for (const auto& weak : mObservers)
-        {
-            if (!weak.expired())
+            if (entry.observer == observer)
                 return false;
         }
+
+        if (freeIndex == MaxObservers)
+            return false;
+
+        ++mGeneration;
+
+        Entry& target = mEntries[freeIndex];
+        target.observer = observer;
+        target.activeCalls = 0;
+        target.generation = mGeneration;
+        target.removed = false;
+        target.waitingRemoval = false;
+
+        mOccupiedBits.set(freeIndex);
 
         return true;
     }
 
-    std::size_t size() const
+    bool add(T& observer)
     {
+        return add(&observer);
+    }
+
+    RemoveResult remove(T* observer)
+    {
+        if (observer == nullptr)
+            return RemoveResult::NullObserver;
+
         std::lock_guard<std::mutex> lock(mLock);
 
-        std::size_t count = 0;
+        const std::size_t index = findActiveEntryIndexLocked(observer);
+        if (index == MaxObservers)
+            return RemoveResult::NotFound;
 
-        for (const auto& weak : mObservers)
+        Entry& entry = mEntries[index];
+        entry.removed = true;
+
+        if (entry.activeCalls == 0 && !entry.waitingRemoval)
+            resetEntryLocked(index);
+
+        return RemoveResult::Removed;
+    }
+
+    RemoveResult remove(T& observer)
+    {
+        return remove(&observer);
+    }
+
+    // IMPORTANT:
+    // Do not use this function in callback.
+    // It's cause deadlock. Please use remove in callback
+    RemoveResult removeAndWait(T* observer)
+    {
+        if (observer == nullptr)
+            return RemoveResult::NullObserver;
+
+        std::unique_lock<std::mutex> lock(mLock);
+
+        const std::size_t index = findActiveEntryIndexLocked(observer);
+        if (index == MaxObservers)
+            return RemoveResult::NotFound;
+
+        Entry& entry = mEntries[index];
+        entry.removed = true;
+
+        if (entry.activeCalls == 0)
         {
-            if (!weak.expired())
-                ++count;
+            resetEntryLocked(index);
+            return RemoveResult::Removed;
         }
 
-        return count;
+        entry.waitingRemoval = true;
+
+        mChanged.wait(lock, [&entry]() {
+            return entry.activeCalls == 0;
+        });
+
+        resetEntryLocked(index);
+        return RemoveResult::Removed;
+    }
+
+    RemoveResult removeAndWait(T& observer)
+    {
+        return removeAndWait(&observer);
+    }
+
+    template <typename Func>
+    void notify(Func&& action) noexcept
+    {
+        static_assert(
+                noexcept(std::declval<Func&>()(std::declval<T*>())),
+                "RawObserverList::notify() callback must be noexcept"
+        );
+
+        std::size_t startGeneration = 0;
+        std::bitset<MaxObservers> occupiedSnapshot;
+
+        {
+            std::lock_guard<std::mutex> lock(mLock);
+            startGeneration = mGeneration;
+            occupiedSnapshot = mOccupiedBits;
+        }
+
+        for (std::size_t i = 0; i < MaxObservers; ++i)
+        {
+            if (!occupiedSnapshot.test(i))
+                continue;
+
+            T* target = acquireForNotify(i, startGeneration);
+            if (target == nullptr)
+                continue;
+
+            action(target);
+
+            releaseAfterNotify(i);
+        }
+
+        releaseRemoved();
     }
 
     bool contains(T* observer) const
     {
-        if (!observer)
+        if (observer == nullptr)
             return false;
 
         std::lock_guard<std::mutex> lock(mLock);
 
-        for (const auto& weak : mObservers)
+        for (std::size_t i = 0; i < MaxObservers; ++i)
         {
-            if (auto sp = weak.lock())
-            {
-                if (sp.get() == observer)
-                    return true;
-            }
+            if (!mOccupiedBits.test(i))
+                continue;
+
+            const Entry& entry = mEntries[i];
+
+            if (entry.observer == observer && !entry.removed)
+                return true;
         }
 
         return false;
     }
 
-    bool contains(const std::shared_ptr<T>& observer) const
+    bool contains(T& observer) const
     {
-        if (!observer)
-            return false;
-
-        return contains(observer.get());
+        return contains(&observer);
     }
 
 private:
-    void compactExpiredLocked()
+    struct Entry
     {
-        mObservers.erase(
-            std::remove_if(
-                mObservers.begin(),
-                mObservers.end(),
-                [](const std::weak_ptr<T>& weak) {
-                    return weak.expired();
-                }),
-            mObservers.end());
+        T* observer = nullptr;
+        std::size_t activeCalls = 0;
+        std::size_t generation = 0;
+        bool removed = false;
+        bool waitingRemoval = false;
+    };
+
+    std::size_t findActiveEntryIndexLocked(T* observer) const
+    {
+        for (std::size_t i = 0; i < MaxObservers; ++i)
+        {
+            if (!mOccupiedBits.test(i))
+                continue;
+
+            const Entry& entry = mEntries[i];
+
+            if (entry.observer == observer && !entry.removed)
+                return i;
+        }
+
+        return MaxObservers;
+    }
+
+    T* acquireForNotify(std::size_t index, std::size_t startGeneration)
+    {
+        std::lock_guard<std::mutex> lock(mLock);
+
+        if (!mOccupiedBits.test(index))
+            return nullptr;
+
+        Entry& entry = mEntries[index];
+
+        if (entry.removed)
+            return nullptr;
+
+        if (entry.generation > startGeneration)
+            return nullptr;
+
+        ++entry.activeCalls;
+        return entry.observer;
+    }
+
+    void releaseAfterNotify(std::size_t index)
+    {
+        bool notifyWaiter = false;
+
+        {
+            std::lock_guard<std::mutex> lock(mLock);
+
+            if (!mOccupiedBits.test(index))
+                return;
+
+            Entry& entry = mEntries[index];
+
+            if (entry.activeCalls > 0)
+                --entry.activeCalls;
+
+            if (entry.activeCalls == 0)
+            {
+                notifyWaiter = entry.waitingRemoval;
+
+                if (entry.removed && !entry.waitingRemoval)
+                    resetEntryLocked(index);
+            }
+        }
+
+        if (notifyWaiter)
+            mChanged.notify_all();
+    }
+
+    void releaseRemoved()
+    {
+        std::lock_guard<std::mutex> lock(mLock);
+
+        for (std::size_t i = 0; i < MaxObservers; ++i)
+        {
+            if (!mOccupiedBits.test(i))
+                continue;
+
+            Entry& entry = mEntries[i];
+
+            if (entry.removed && !entry.waitingRemoval && entry.activeCalls == 0)
+                resetEntryLocked(i);
+        }
+    }
+
+    void resetEntryLocked(std::size_t index)
+    {
+        Entry& entry = mEntries[index];
+
+        entry.observer = nullptr;
+        entry.activeCalls = 0;
+        entry.generation = 0;
+        entry.removed = false;
+        entry.waitingRemoval = false;
+
+        mOccupiedBits.reset(index);
     }
 
 private:
-    std::vector<std::weak_ptr<T>> mObservers;
-    mutable std::mutex           mLock;
+    mutable std::mutex mLock;
+    std::condition_variable mChanged;
+
+    std::array<Entry, MaxObservers> mEntries{};
+    std::bitset<MaxObservers> mOccupiedBits{};
+    std::size_t mGeneration = 0;
 };

@@ -15,16 +15,19 @@ public:
     TimerTask();
     ~TimerTask();
 
-    void     setHandler(ITimerHandler* handler);
+    void     setHandler(ITimerHandler* handler) override;
 
-    void     start(uint32_t msec, bool repeat);
-    void     stop();
+    void     start(uint32_t msec, bool repeat) override;
+    void     restart() override;
+    void     stop() override;
 
-    void     setInterval(uint32_t msec);
-    uint32_t getInterval() const;
+    void     setInterval(uint32_t msec) override;
+    uint32_t getInterval() const override;
 
-    void     setRepeat(bool repeat);
-    bool     getRepeat() const;
+    void     setRepeat(bool repeat) override;
+    bool     getRepeat() const override;
+
+    bool     isRunning() const override;
 
 private:
     ITimerHandler*  mHandler;
@@ -39,3 +42,8 @@ private:
 private:
     mutable std::recursive_mutex mLock;
 };
+
+inline bool TimerTask::isRunning() const
+{
+    return shouldRun();
+}

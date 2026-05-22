@@ -17,6 +17,7 @@ public:
     TimerTest()
     {
         mTimer.setHandler(this);
+        mTimer2.setHandler(this);
     }
 
     ~TimerTest()
@@ -27,24 +28,43 @@ public:
     void start()
     {
         mTimer.start(1000, true);
+        mTimer2.start(1000, true);
     }
 
     void stop()
     {
         mTimer.stop();
+        mTimer2.stop();
     }
 
 protected:
-    bool onTimerExpired(const ITimer* timer) override
+    bool onTimerExpired(const ITimer& timer) override
     {
         (void)timer;
 
-        LOGD("timer expired.");
-        return true;
+        if (mTimer == timer)
+        {
+            LOGD("timer expired. : %d", mNum ++);
+
+            if (mNum > 5)
+            {
+                mTimer.stop();
+                mTimer2.stop();
+            }
+
+            return true;
+        }
+        else
+        {
+            LOGD("timer2 expired.");
+            return true;
+        }
     }
 
 private:
-    TimerTask mTimer;
+    Timer mTimer;
+    Timer mTimer2;
+    int mNum = 0;
 };
 
 #include "Task.h"

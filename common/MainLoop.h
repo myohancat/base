@@ -17,7 +17,7 @@
 class IFdWatcher
 {
 public:
-    virtual ~IFdWatcher() { }
+    virtual ~IFdWatcher() = default;
 
     virtual int  getFD() = 0;
     virtual bool onFdReadable(int fd) = 0;
@@ -50,21 +50,37 @@ private:
     uint32_t runTimers();
     bool     runFunctions();
 
-    bool     drainWakeupFd();
+    enum class LoopCommand : uint8_t
+    {
+        Wakeup    = 'S',
+        Terminate = 'T'
+    };
+
+    void sendCommand(LoopCommand command);
+    bool drainCommandPipe(bool& terminated);
+
+    void insertTimerLocked(Timer* timer);
+    Timer* takeExpiredTimerLocked(uint64_t now);
+
+    uint32_t getNextTimerTimeoutLocked(uint64_t now) const;
+    uint32_t getNextTimerTimeout();
 
 private:
-    RawObserverList<IFdWatcher> mFdWatchers;
+    static constexpr uint32_t WaitTimeMs = 10 * 1000;
+
+    using TimerList = std::list<Timer*>;
+    using FunctionList = std::list<std::function<void()>>;
+
+    RawObserverList<IFdWatcher, 30> mFdWatchers;
 
     std::mutex mTimerLock;
-    typedef std::list<Timer*> TimerList;
     TimerList mTimers;
 
     std::mutex mFunctionLock;
-    typedef std::list<std::function<void()> > FunctionList;
     FunctionList mFunctions;
 
     int mEpollFd;
-    int mWakeupFd;
+    int mPipe[2];
 
     std::atomic<bool> mTerminated;
 };
