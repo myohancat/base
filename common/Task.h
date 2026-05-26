@@ -11,6 +11,7 @@
 #include <atomic>
 #include <string>
 #include <cstdint>
+#include <climits>
 
 #include <pthread.h>
 
@@ -82,9 +83,11 @@ private:
     };
 
     std::mutex              mLock;
-    std::condition_variable mCvSleep;
     std::atomic<TaskState>  mState;
+
     bool                    mWakeupRequested;
+    mutable std::mutex      mSleepLock;
+    std::condition_variable mCvSleep;
 
 private:
     static void* _task_proc_priv(void* param);
@@ -97,6 +100,12 @@ inline int Task::getCpuAffinity() const
 
 inline void Task::sleep(int sec)
 {
+    if (sec <= 0)
+        return;
+
+    if (sec > INT_MAX / 1000)
+        sec = INT_MAX / 1000;
+
     msleep(sec * 1000);
 }
 

@@ -8,6 +8,7 @@
 
 #include <unistd.h>
 #include <sched.h>
+#include <errno.h>
 #include <cstring>
 #include "Log.h"
 
@@ -60,6 +61,7 @@ Task::~Task()
     if (state == TaskState::Exited)
     {
         pthread_join(mId, nullptr);
+        mState.store(TaskState::Idle);
         return;
     }
 
@@ -70,7 +72,9 @@ Task::~Task()
      */
     if (state != TaskState::Idle)
     {
-        LOGE("Derived class must stop() before destroyed.");
+        LOGE("[%s] Derived class must call stop() before destroyed. State: %d",
+             mName.c_str(),
+             static_cast<int>(state));
         abort();
     }
 }
@@ -98,7 +102,7 @@ bool Task::start()
     std::unique_lock<std::mutex> lock(mLock);
 
     TaskState state = mState.load();
-    if (state != TaskState::Idle && state != TaskState::Exited)
+    if (state == TaskState::Running || state == TaskState::Stopping)
     {
         LOGW("task %s is already running", mName.c_str());
         return false;
@@ -134,17 +138,21 @@ bool Task::start()
         return false;
     }
 
-    mState.store(TaskState::Running);
-
-    mWakeupRequested = false;
-    if (pthread_create(&mId, &attr, _task_proc_priv, this) != 0)
     {
-        LOGE("pthread create failed !");
-        pthread_attr_destroy(&attr);
+        std::lock_guard<std::mutex> sleepLock(mSleepLock);
+        mWakeupRequested = false;
+    }
+
+    mState.store(TaskState::Running);
+    int ret = pthread_create(&mId, &attr, _task_proc_priv, this);
+    pthread_attr_destroy(&attr);
+
+    if (ret != 0)
+    {
+        LOGE("[%s] pthread_create() failed: %s", mName.c_str(), std::strerror(ret));
         mState.store(TaskState::Idle);
         return false;
     }
-    pthread_attr_destroy(&attr);
 
     // CPU Affinity
     if (mCpuId != -1)
@@ -162,36 +170,50 @@ bool Task::start()
     nameBuf[15] = '\0';
     pthread_setname_np(mId, nameBuf);
 
-    onPostStart();
-
     return true;
 }
 
 void Task::stop()
 {
-    std::unique_lock<std::mutex> lock(mLock);
+    TaskState current = mState.load();
 
-    TaskState state = mState.load();
-    if (state == TaskState::Idle || state == TaskState::Stopping)
-        return;
-
-    if (state != TaskState::Exited)
-        mState.store(TaskState::Stopping);
-
-    onPreStop();
-
-    mWakeupRequested = true;
-    mCvSleep.notify_all();
-
-    if (pthread_equal(pthread_self(), mId))
+    if (current == TaskState::Stopping &&
+        pthread_equal(pthread_self(), mId))
     {
-        // No Join. Same Thread
         return;
     }
 
-    mLock.unlock();
-    pthread_join(mId, NULL);
-    mLock.lock();
+    std::lock_guard<std::mutex> lock(mLock);
+
+    TaskState state = mState.load();
+
+    if (state == TaskState::Idle)
+        return;
+
+    if (state == TaskState::Exited)
+    {
+        pthread_join(mId, nullptr);
+        mState.store(TaskState::Idle);
+        return;
+    }
+
+    if (state == TaskState::Running)
+    {
+        mState.store(TaskState::Stopping);
+    }
+
+    onPreStop();
+
+    {
+        std::lock_guard<std::mutex> sleepLock(mSleepLock);
+        mWakeupRequested = true;
+    }
+    mCvSleep.notify_all();
+
+    if (pthread_equal(pthread_self(), mId) != 0)
+        return;
+
+    pthread_join(mId, nullptr);
 
     mState.store(TaskState::Idle);
 }
@@ -202,11 +224,13 @@ void Task::msleep(int msec)
         return;
 
     {
-        std::unique_lock<std::mutex> lock(mLock);
+        std::unique_lock<std::mutex> lock(mSleepLock);
 
-        if (pthread_equal(pthread_self(), mId))
+        TaskState state = mState.load();
+        if ((state == TaskState::Running || state == TaskState::Stopping) &&
+             pthread_equal(pthread_self(), mId) != 0)
         {
-            if (mState.load() == TaskState::Stopping)
+            if (state == TaskState::Stopping)
                 return;
 
             mCvSleep.wait_for(lock, std::chrono::milliseconds(msec), [this]() {
@@ -217,14 +241,22 @@ void Task::msleep(int msec)
         }
     }
 
-    // not in task loop
-    usleep(msec *1000);
+    timespec req;
+    req.tv_sec = msec / 1000;
+    req.tv_nsec = static_cast<long>(msec % 1000) * 1000000L;
+    while (nanosleep(&req, &req) != 0)
+    {
+        if (errno != EINTR)
+            break;
+    }
 }
 
 void Task::wakeup()
 {
-    std::lock_guard<std::mutex> lock(mLock);
-    mWakeupRequested = true;
+    {
+        std::lock_guard<std::mutex> lock(mSleepLock);
+        mWakeupRequested = true;
+    }
     mCvSleep.notify_all();
 }
 
@@ -232,15 +264,18 @@ void* Task::_task_proc_priv(void* param)
 {
     Task* pThis = static_cast<Task*>(param);
 
+    pThis->onPostStart();
+
     pThis->run();
 
-    {
-        std::lock_guard<std::mutex> lock(pThis->mLock);
-        TaskState state = pThis->mState.load();
-        if (state == TaskState::Running || state == TaskState::Stopping)
-            pThis->mState.store(TaskState::Exited);
+    pThis->onPostStop();
 
-        onPostStop();
+    TaskState state = pThis->mState.load();
+
+    if (state == TaskState::Running || state == TaskState::Stopping)
+    {
+        pThis->mState.store(TaskState::Exited);
     }
+
     return NULL;
 }
