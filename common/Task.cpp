@@ -175,12 +175,6 @@ void Task::stop()
     if (state == TaskState::Idle || state == TaskState::Stopping)
         return;
 
-    if (pthread_equal(pthread_self(), mId))
-    {
-        LOGE("You must not call stop() directly.");
-        return;
-    }
-
     if (state != TaskState::Exited)
         mState.store(TaskState::Stopping);
 
@@ -189,12 +183,17 @@ void Task::stop()
     mWakeupRequested = true;
     mCvSleep.notify_all();
 
+    if (pthread_equal(pthread_self(), mId))
+    {
+        // No Join. Same Thread
+        return;
+    }
+
     mLock.unlock();
     pthread_join(mId, NULL);
     mLock.lock();
 
     mState.store(TaskState::Idle);
-    onPostStop();
 }
 
 void Task::msleep(int msec)
@@ -240,6 +239,8 @@ void* Task::_task_proc_priv(void* param)
         TaskState state = pThis->mState.load();
         if (state == TaskState::Running || state == TaskState::Stopping)
             pThis->mState.store(TaskState::Exited);
+
+        onPostStop();
     }
     return NULL;
 }
