@@ -14,7 +14,7 @@
 static void _sig_handler(int signum)
 {
     (void)signum;
-
+    // Don't do anything.
     MainLoop::getInstance().terminate();
 }
 
