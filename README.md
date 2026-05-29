@@ -15,7 +15,6 @@ static void _sig_handler(int signum)
 {
     (void)signum;
 
-    printf("SIGINT - terminate program\n");
     MainLoop::getInstance().terminate();
 }
 
