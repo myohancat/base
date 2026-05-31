@@ -7,10 +7,11 @@ static void _sig_handler(int signum)
 {
     (void)signum;
 
+    // NOP
     MainLoop::getInstance().terminate();
 }
 
-#include "TimerTask.h"
+#include "TimerThread.h"
 class TimerTest : public ITimerHandler
 {
 public:
@@ -67,19 +68,28 @@ private:
     int mNum = 0;
 };
 
-#include "Task.h"
-class TaskTest : public Task
+#include "WorkerThread.h"
+class ThreadTest : public IWorker
 {
-protected:
-    void run() override
+public:
+    ~ThreadTest() { stop(); }
+
+    bool start() { return mThread.start(*this); }
+    void stop()  { mThread.stop(); }
+
+private:
+    void run() noexcept override
     {
         int count = 0;
-        while (shouldRun())
+        while (mThread.shouldRun())
         {
             LOGD("count : %d", ++count);
-            msleep(1000);
+            mThread.msleep(1000);
         }
     }
+
+private:
+    WorkerThread mThread;
 };
 
 int main(void)
@@ -89,12 +99,12 @@ int main(void)
     TimerTest timer;
     timer.start();
 
-    TaskTest  task;
-    task.start();
+    ThreadTest  tread;
+    tread.start();
 
     while (MainLoop::getInstance().loop()) {  /* NOP */ }
 
-    task.stop();
+    tread.stop();
     timer.stop();
 
     return 0;

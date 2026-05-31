@@ -7,13 +7,13 @@
 #pragma once
 
 #include "Timer.h"
-#include "Task.h"
+#include "WorkerThread.h"
 
-class TimerTask : public ITimer, Task
+class TimerThread : public ITimer, IWorker
 {
 public:
-    TimerTask();
-    ~TimerTask();
+    TimerThread();
+    ~TimerThread();
 
     void     setHandler(ITimerHandler* handler) override;
 
@@ -37,13 +37,14 @@ private:
     int      mIntervalMs;
 
 private:
-    void     run() override;
+    void     run() noexcept override;
 
 private:
     mutable std::recursive_mutex mLock;
+    WorkerThread mThread;
 };
 
-inline bool TimerTask::isRunning() const
+inline bool TimerThread::isRunning() const
 {
-    return shouldRun();
+    return mThread.shouldRun();
 }

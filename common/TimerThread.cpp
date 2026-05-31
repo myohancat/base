@@ -4,7 +4,7 @@
  *
  * author: Kyungin.Kim < myohancat@naver.com >
  */
-#include "TimerTask.h"
+#include "TimerThread.h"
 
 #include <errno.h>
 #include "SysTime.h"
@@ -13,30 +13,30 @@
 
 using Lock = std::unique_lock<std::recursive_mutex>;
 
-TimerTask::TimerTask()
-          : Task("TimerTask"),
-            mRepeat(false),
+TimerThread::TimerThread()
+          : mRepeat(false),
             mStartTime(0),
             mIntervalMs(0),
-            mHandler(nullptr)
+            mHandler(nullptr),
+            mThread("TimerThread")
 {
 }
 
-TimerTask::~TimerTask()
+TimerThread::~TimerThread()
 {
     stop();
 }
 
-void TimerTask::setHandler(ITimerHandler* handler)
+void TimerThread::setHandler(ITimerHandler* handler)
 {
     Lock lock(mLock);
 
     mHandler = handler;
 }
 
-void TimerTask::start(uint32_t msec, bool repeat)
+void TimerThread::start(uint32_t msec, bool repeat)
 {
-    stop();
+    mThread.stop();
 
     {
         Lock lock(mLock);
@@ -45,52 +45,54 @@ void TimerTask::start(uint32_t msec, bool repeat)
         mIntervalMs = msec;
     }
 
-    if (!Task::start())
+    if (!mThread.start(*this))
     {
         LOGE("failed to create task");
     }
 }
 
-void TimerTask::stop()
+void TimerThread::stop()
 {
-    Task::stop();
+    mThread.stop();
 }
 
-void TimerTask::setInterval(uint32_t msec)
+void TimerThread::setInterval(uint32_t msec)
 {
     Lock lock(mLock);
     mIntervalMs = msec;
 }
 
-void TimerTask::setRepeat(bool repeat)
+void TimerThread::setRepeat(bool repeat)
 {
     Lock lock(mLock);
     mRepeat = repeat;
 }
 
-uint32_t TimerTask::getInterval() const
+uint32_t TimerThread::getInterval() const
 {
     Lock lock(mLock);
     return mIntervalMs;
 }
 
-bool TimerTask::getRepeat() const
+bool TimerThread::getRepeat() const
 {
     Lock lock(mLock);
     return mRepeat;
 }
 
-void TimerTask::restart()
+void TimerThread::restart()
 {
-    stop();
-
-    mStartTime  = SysTime::getTickCountMs();
-    Task::start();
+    mThread.stop();
+    {
+        Lock lock(mLock);
+        mStartTime  = SysTime::getTickCountMs();
+    }
+    mThread.start(*this);
 }
 
-void TimerTask::run()
+void TimerThread::run() noexcept
 {
-    while (shouldRun())
+    while (mThread.shouldRun())
     {
         int timeoutMs = 0;
         {
@@ -111,12 +113,12 @@ void TimerTask::run()
                 timeoutMs = static_cast<int>(remainMs);
         }
 
-        msleep(timeoutMs);
+        mThread.msleep(timeoutMs);
 
         {
             Lock lock(mLock);
 
-            if (!shouldRun())
+            if (!mThread.shouldRun())
                 break;
 
             bool keepGoing = mRepeat;
