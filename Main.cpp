@@ -1,112 +1,66 @@
-#include <signal.h>
-
-#include "Log.h"
 #include "MainLoop.h"
+#include "Platform.h"
+#include "Log.h"
 
-static void _sig_handler(int signum)
+static bool platform_init()
 {
-    (void)signum;
-
-    // NOP
-    MainLoop::getInstance().terminate();
+    // TODO
+    return true;
 }
 
-#include "TimerThread.h"
-class TimerTest : public ITimerHandler
+static void platform_deinit()
+{
+    // TODO
+}
+
+
+#include "WorkerThread.h"
+class App : public IWorker
 {
 public:
-    TimerTest()
-    {
-        mTimer.setHandler(this);
-        mTimer2.setHandler(this);
-    }
+    App(MainLoop& loop) : mLoop(loop) { }
+    virtual ~App() override { stop(); }
 
-    ~TimerTest()
+    bool start()
     {
-        stop();
-    }
-
-    void start()
-    {
-        mTimer.start(1000, true);
-        mTimer2.start(1000, true);
+        return mThread.start(*this);
     }
 
     void stop()
     {
-        mTimer.stop();
-        mTimer2.stop();
+        mThread.stop();
     }
-
-protected:
-    bool onTimerExpired(const ITimer& timer) override
-    {
-        (void)timer;
-
-        if (mTimer == timer)
-        {
-            LOGD("timer expired. : %d", mNum ++);
-
-            if (mNum > 5)
-            {
-                mTimer.stop();
-                mTimer2.stop();
-            }
-
-            return true;
-        }
-        else
-        {
-            LOGD("timer2 expired.");
-            return true;
-        }
-    }
-
-private:
-    Timer mTimer;
-    Timer mTimer2;
-    int mNum = 0;
-};
-
-#include "WorkerThread.h"
-class ThreadTest : public IWorker
-{
-public:
-    ~ThreadTest() { stop(); }
-
-    bool start() { return mThread.start(*this); }
-    void stop()  { mThread.stop(); }
 
 private:
     void run() noexcept override
     {
-        int count = 0;
+    __TRACE__
         while (mThread.shouldRun())
         {
-            LOGD("count : %d", ++count);
-            mThread.msleep(1000);
+             mThread.msleep(100);
         }
     }
 
 private:
+    MainLoop& mLoop;
     WorkerThread mThread;
 };
 
-int main(void)
+int main()
 {
-    signal(SIGINT, _sig_handler);
+    MainLoop loop;
 
-    TimerTest timer;
-    timer.start();
+    Platform platform(loop); // RAII Pattern
+    if (!platform.init(platform_init, platform_deinit))
+       return -1;
 
-    ThreadTest  tread;
-    tread.start();
+    App app(loop);
+    if (!app.start())
+       return -2;
 
-    while (MainLoop::getInstance().loop()) {  /* NOP */ }
+    loop.loop();
 
-    tread.stop();
-    timer.stop();
+    app.stop();
 
     return 0;
 }
-

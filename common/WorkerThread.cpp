@@ -221,8 +221,6 @@ void WorkerThread::stop()
     if (state == ThreadState::Idle)
         return;
 
-    bool callPreStop = false;
-
     if (state == ThreadState::Running)
     {
         mState.store(ThreadState::Stopping);

@@ -84,7 +84,6 @@ public:
     static constexpr uint32_t Infinite = static_cast<uint32_t>(-1);
 
 public:
-    Timer();
     ~Timer() override;
 
     Timer(const Timer&) = delete;
@@ -109,6 +108,7 @@ public:
 
 private:
     friend class MainLoop;
+    Timer(MainLoop& loop);
 
     enum class State
     {
@@ -124,6 +124,7 @@ private:
      * Hidden from ITimer users.
      */
     uint64_t getExpiryFromLoop() const;
+
     bool tryBeginExecuteFromLoop();
     bool executeFromLoop();
     void requeueFromLoop();

@@ -59,9 +59,10 @@ public:
      * onPostStop()  : called by the worker thread, after run().
      */
     virtual bool onPreStart()  { return true; }
-    virtual void onPostStart() { }
     virtual void onPreStop()   { }
-    virtual void onPostStop()  { }
+
+    virtual void onPostStart() noexcept { }
+    virtual void onPostStop()  noexcept { }
 };
 
 class WorkerThread
