@@ -52,12 +52,6 @@ bool setNonBlockAndCloseOnExec(int fd)
 }
 }
 
-MainLoop& MainLoop::getInstance()
-{
-    static MainLoop instance;
-    return instance;
-}
-
 MainLoop::MainLoop()
     : mEpollFd(-1)
     , mPipe { -1, -1 }
@@ -112,6 +106,11 @@ MainLoop::~MainLoop()
     SAFE_CLOSE(mPipe[0]);
     SAFE_CLOSE(mPipe[1]);
     SAFE_CLOSE(mEpollFd);
+}
+
+Timer MainLoop::createTimer()
+{
+    return Timer(*this);
 }
 
 void MainLoop::addFdWatcher(IFdWatcher* watcher)
@@ -323,7 +322,12 @@ uint32_t MainLoop::runTimers()
     return getNextTimerTimeout();
 }
 
-bool MainLoop::loop()
+void MainLoop::loop()
+{
+    while(loopOnce()) { /* NOP */ }
+}
+
+bool MainLoop::loopOnce()
 {
     if (mEpollFd < 0 || mPipe[0] < 0)
         return false;

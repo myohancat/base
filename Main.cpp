@@ -1,5 +1,6 @@
 #include "MainLoop.h"
 #include "Platform.h"
+#include "WorkerThread.h"
 #include "Log.h"
 
 static bool platform_init()
@@ -13,21 +14,37 @@ static void platform_deinit()
     // TODO
 }
 
-
-#include "WorkerThread.h"
-class App : public IWorker
+/**
+ * Simple Example Code
+ *   How to use my base code.
+ *     - MainLoop - Timer, EventQ
+ *     - WorkerThread
+ */
+class App : public IWorker, public ITimerHandler
 {
 public:
-    App(MainLoop& loop) : mLoop(loop) { }
-    virtual ~App() override { stop(); }
+    explicit App(MainLoop& loop) : mLoop(loop)
+                                 , mTimer(loop.createTimer())
+    {
+        mTimer.setHandler(this);
+    }
+
+    virtual ~App() override
+    {
+        stop();
+
+        mTimer.setHandler(nullptr);
+    }
 
     bool start()
     {
+	    mTimer.start(1000, true);
         return mThread.start(*this);
     }
 
     void stop()
     {
+        mTimer.stop();
         mThread.stop();
     }
 
@@ -35,14 +52,23 @@ private:
     void run() noexcept override
     {
     __TRACE__
+        int n = 0;
         while (mThread.shouldRun())
         {
-             mThread.msleep(100);
+            LOGD("Thread : %d", n++);
+            mThread.msleep(1000);
         }
+    }
+
+    bool onTimerExpired(const ITimer& timer) noexcept override
+    {
+        LOGD("TimerExpired.");
+        return true;
     }
 
 private:
     MainLoop& mLoop;
+    Timer mTimer;
     WorkerThread mThread;
 };
 

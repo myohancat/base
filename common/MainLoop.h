@@ -26,26 +26,29 @@ public:
 class MainLoop
 {
 public:
-    static MainLoop& getInstance();
+    MainLoop();
+    ~MainLoop();
+
+    Timer createTimer();
 
     void addFdWatcher(IFdWatcher* watcher);
     void removeFdWatcher(IFdWatcher* watcher);
 
-    void addTimer(Timer* timer);
-    void removeTimer(Timer* timer);
-
     void post(const std::function<void()>& func);
 
-    bool loop();
+    void loop();
     void wakeup();
     void terminate();
 
 private:
-    MainLoop();
-    ~MainLoop();
-
     MainLoop(const MainLoop&) = delete;
     MainLoop& operator=(const MainLoop&) = delete;
+
+    bool loopOnce();
+    friend class Timer;
+
+    void addTimer(Timer* timer);
+    void removeTimer(Timer* timer);
 
     uint32_t runTimers();
     bool     runFunctions();

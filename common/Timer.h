@@ -78,6 +78,8 @@ public:
     virtual bool isRunning() const = 0;
 };
 
+class MainLoop;
+
 class Timer : public ITimer
 {
 public:
@@ -108,6 +110,7 @@ public:
 
 private:
     friend class MainLoop;
+
     Timer(MainLoop& loop);
 
     enum class State
@@ -135,6 +138,7 @@ private:
     static uint64_t makeExpiry(uint32_t interval);
 
 private:
+    MainLoop& mLoop;
     /*
      * Serializes public control APIs:
      * start(), restart(), stop(), stopAndWait(), destructor.

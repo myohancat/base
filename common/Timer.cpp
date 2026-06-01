@@ -18,8 +18,9 @@ uint64_t Timer::makeExpiry(uint32_t interval)
     return SysTime::getTickCountMs() + interval;
 }
 
-Timer::Timer()
-    : mState(State::Stopped)
+Timer::Timer(MainLoop& loop)
+    : mLoop(loop)
+    , mState(State::Stopped)
     , mStopRequested(false)
     , mExpiry(static_cast<uint64_t>(-1))
     , mHandler(nullptr)
@@ -75,7 +76,7 @@ void Timer::start(uint32_t msec, bool repeat)
     mStopRequested.store(false, std::memory_order_release);
     mState.store(State::Queued, std::memory_order_release);
 
-    MainLoop::getInstance().addTimer(this);
+    mLoop.addTimer(this);
 }
 
 void Timer::restart()
@@ -114,7 +115,7 @@ void Timer::stop()
                         std::memory_order_acquire))
                 {
                     mStopRequested.store(true, std::memory_order_release);
-                    MainLoop::getInstance().removeTimer(this);
+                    mLoop.removeTimer(this);
                     mStateChanged.notify_all();
                     return;
                 }
@@ -160,7 +161,7 @@ void Timer::stopAndWait()
                         std::memory_order_acquire))
                 {
                     mStopRequested.store(true, std::memory_order_release);
-                    MainLoop::getInstance().removeTimer(this);
+                    mLoop.removeTimer(this);
                     mStateChanged.notify_all();
                     return;
                 }
@@ -326,11 +327,11 @@ void Timer::requeueFromLoop()
      * This prevents stopAndWait() from returning while MainLoop still holds
      * this Timer pointer.
      */
-    MainLoop::getInstance().addTimer(this);
+    mLoop.addTimer(this);
 
     if (mStopRequested.load(std::memory_order_acquire))
     {
-        MainLoop::getInstance().removeTimer(this);
+        mLoop.removeTimer(this);
 
         mState.store(State::Stopped, std::memory_order_release);
         mStateChanged.notify_all();

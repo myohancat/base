@@ -24,7 +24,7 @@ private:
     static void _sig_handler(int) noexcept
     {
         if (sLoop) {
-            sLoop->notifyTerminationSignal();
+            sLoop->terminate();
         }
     }
 
@@ -62,7 +62,7 @@ private:
 public:
     explicit Platform(MainLoop& loop) noexcept
     {
-        ASSERT_IF(sInstantiated, "Platform instance already exists! You can only create one.");
+        //ASSERT_IF(sInstantiated, "Platform instance already exists! You can only create one.");
 
         sLoop = &loop;
         sInstantiated = true;
