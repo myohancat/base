@@ -8,25 +8,103 @@
 
 ```c
 #include "MainLoop.h"
+#include "Platform.h"
+#include "WorkerThread.h"
+#include "Log.h"
 
-#include <signal.h>
-
-static void _sig_handler(int signum)
+static bool platform_init()
 {
-    (void)signum;
-    // Don't do anything.
-    MainLoop::getInstance().terminate();
+    // TODO
+    return true;
 }
 
-int main(void)
+static void platform_deinit()
 {
-    signal(SIGINT, _sig_handler);
+    // TODO
+}
 
-    // TODO. IMPLEMENTS HERE
+/**
+ * Simple Example Code
+ *   How to use my base code.
+ *     - MainLoop - Timer, EventQ
+ *     - WorkerThread
+ */
+class App : public IWorker, public ITimerHandler, public IEventHandler
+{
+public:
+    explicit App(MainLoop& loop) : mLoop(loop)
+                                 , mTimer(loop.createTimer())
+                                 , mEvtQ(loop.createEventQ())
+    {
+        mTimer.setHandler(this);
+	mEvtQ.setHandler(this);
+    }
 
-    while(MainLoop::getInstance().loop()) { }
+    virtual ~App() override
+    {
+        stop();
 
-    // TODO. IMPLEMENTS HERE
+        mTimer.setHandler(nullptr);
+        mEvtQ.setHandler(nullptr);
+    }
+
+    bool start()
+    {
+	mTimer.start(1000, true);
+        return mThread.start(*this);
+    }
+
+    void stop()
+    {
+        mTimer.stop();
+        mThread.stop();
+    }
+
+private:
+    void run() noexcept override
+    {
+    __TRACE__
+        int n = 0;
+        while (mThread.shouldRun())
+        {
+             mEvtQ.sendEvent(n++);
+             mThread.msleep(1000);
+        }
+    }
+
+    bool onTimerExpired(const ITimer& timer) noexcept override
+    {
+        LOGD("TimerExpired.");
+        return true;
+    }
+
+    void onEventReceived(int id, void* data, int dataLen) noexcept override
+    {
+        LOGD("Event : %d", id);
+    }
+
+private:
+    MainLoop& mLoop;
+    Timer mTimer;
+    EventQ mEvtQ;
+    WorkerThread mThread;
+};
+
+int main()
+{
+    MainLoop loop;
+
+    Platform platform(loop); // RAII Pattern
+    if (!platform.init(platform_init, platform_deinit))
+       return -1;
+
+    App app(loop);
+    if (!app.start())
+       return -2;
+
+    loop.loop();
+
+    app.stop();
 
     return 0;
 }
